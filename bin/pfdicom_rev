@@ -1,0 +1,311 @@
+#!/usr/bin/env python3
+#
+# (c) 2018 Fetal-Neonatal Neuroimaging & Developmental Science Center
+#                   Boston Children's Hospital
+#
+#              http://childrenshospital.org/FNNDSC/
+#                        dev@babyMRI.org
+#
+
+import sys, os
+sys.path.insert(1, os.path.join(os.path.dirname(__file__), '../pfdicom_rev'))
+
+import  pfdicom_rev
+from    argparse            import RawTextHelpFormatter
+from    argparse            import ArgumentParser
+import  pudb
+
+import  pfmisc
+from    pfmisc._colors      import Colors
+from    pfmisc              import other
+
+str_version = "0.0.99"
+str_desc = Colors.CYAN + """
+
+
+
+        __    _ _                                      
+       / _|  | (_)                                     
+ _ __ | |_ __| |_  ___ ___  _ __ ___    _ __ _____   __
+| '_ \|  _/ _` | |/ __/ _ \| '_ ` _ \  | '__/ _ \ \ / /
+| |_) | || (_| | | (_| (_) | | | | | | | | |  __/\ V / 
+| .__/|_| \__,_|_|\___\___/|_| |_| |_| |_|  \___| \_/  
+| |                                ______              
+|_|                               |______|             
+
+
+
+
+
+                        Path-File DICOM series processing
+
+        Recursively walk down a directory tree and process DICOM directories
+        to generate JSON formatted descriptor file(s) for processing by the
+        ReV viewer.
+
+                             -- version """ + \
+             Colors.YELLOW + str_version + Colors.CYAN + """ --
+
+        'pfdicom_rev' is a customizable and friendly DICOM directory analyzer
+        that summarises information in a DICOM dir and can also produce a
+        JPG preview of files.
+
+        The summary information and JPG preview is specific to being processed
+        by the ReV viewer.         
+
+""" + Colors.NO_COLOUR
+
+def synopsis(ab_shortOnly = False):
+    scriptName = os.path.basename(sys.argv[0])
+    shortSynopsis =  """
+    NAME
+
+	    pfdicom_rev 
+
+    SYNOPSIS
+
+        pfdicom_rev                                         \\
+                     -I|--inputDir <inputDir>               \\
+                    [-e|--extension <DICOMextension>]       \\
+                    [--threads <numThreads>]                \\
+                    [-x|--man]                              \\
+                    [-y|--synopsis]                         \\
+                    [--followLinks]                         \\
+                    [--json]
+
+    BRIEF EXAMPLE
+
+        pfdicom_rev                                         \\
+                    -I /var/www/html/normsmall -e dcm       \\
+                    -O /var/www/html/anon                   \\
+                    --tagStruct '
+                    {
+                        "PatientName":       "anonymized",
+                        "PatientID":         "%_md5|7_PatientID",
+                        "AccessionNumber":   "%_md5|10_AccessionNumber",
+                        "PatientBirthDate":  "%_strmsk|******01_PatientBirthDate"
+                    }
+                    ' --threads 0 --printElapsedTime
+    """
+
+    description =  '''
+    DESCRIPTION
+
+        ``pfdicom_rev`` processes directories containing DICOM files for the
+        ReV viewer.
+
+        The script accepts an ``<inputDir>``, and then from this point an 
+        ``os.walk()`` is performed to extract all the subdirs. Each subdir is 
+        examined for DICOM files (in the simplest sense by a file extension mapping) 
+        are passed to a processing method that reads and replaces specified 
+        DICOM tags, saving the result in a corresponding directory and filename
+        in the output tree.
+
+    ARGS
+
+        -I|--inputDir <inputDir>
+        Input DICOM directory to examine. By default, the first file in this
+        directory is examined for its tag information. There is an implicit
+        assumption that each <inputDir> contains a single DICOM series.
+
+        -i|--inputFile <inputFile>
+        An optional <inputFile> specified relative to the <inputDir>. If 
+        specified, then do not perform a directory walk, but convert only 
+        this file.
+
+        -e|--extension <DICOMextension>
+        An optional extension to filter the DICOM files of interest from the 
+        <inputDir>.
+
+        [-O|--outputDir <outputDir>]
+        The output root directory that will contain a tree structure identical
+        to the input directory, and each "leaf" node will contain the analysis
+        results.
+
+        [--outputLeafDir <outputLeafDirFormat>]
+        If specified, will apply the <outputLeafDirFormat> to the output
+        directories containing data. This is useful to blanket describe
+        final output directories with some descriptive text, such as 
+        'anon' or 'preview'. 
+
+        This is a formatting spec, so 
+
+            --outputLeafDir 'preview-%%s'
+
+        where %%s is the original leaf directory node, will prefix each
+        final directory containing output with the text 'preview-' which
+        can be useful in describing some features of the output set.
+
+        -F|--tagFile <JSONtagFile>
+        Parse the tags and their "subs" from a JSON formatted <JSONtagFile>.
+
+        -T|--tagStruct <JSONtagStructure>
+        Parse the tags and their "subs" from a JSON formatted <JSONtagStucture>
+        passed directly in the command line.
+
+        -o|--outputFileStem <outputFileStem>
+        The output file stem to store data. This should *not* have a file
+        extension, or rather, any "." in the name are considered part of 
+        the stem and are *not* considered extensions.
+
+        [--threads <numThreads>]
+        If specified, break the innermost analysis loop into <numThreads>
+        threads.
+
+        [-x|--man]
+        Show full help.
+
+        [-y|--synopsis]
+        Show brief help.
+
+        [--json]
+        If specified, output a JSON dump of final return.
+
+        [--followLinks]
+        If specified, follow symbolic links.
+
+        -v|--verbosity <level>
+        Set the app verbosity level. 
+
+            0: No internal output;
+            1: Run start / stop output notification;
+            2: As with level '1' but with simpleProgress bar in 'pftree';
+            3: As with level '2' but with list of input dirs/files in 'pftree';
+            5: As with level '3' but with explicit file logging for
+                    - read
+                    - analyze
+                    - write
+
+    EXAMPLES
+
+    Perform a DICOM anonymization by processing specific tags:
+
+        pfdicom_rev                                         \\
+                    -I /var/www/html/normsmall -e dcm       \\
+                    -O /var/www/html/anon                   \\
+                    --tagStruct '
+                    {
+                        "PatientName":       "anonymized",
+                        "PatientID":         "%_md5|7_PatientID",
+                        "AccessionNumber":   "%_md5|10_AccessionNumber",
+                        "PatientBirthDate":  "%_strmsk|******01_PatientBirthDate"
+                    }
+                    ' --threads 0 -v 0 --json
+
+        which will output only at script conclusion and will log a JSON 
+        formatted string.
+
+
+    '''
+    
+    if ab_shortOnly:
+        return shortSynopsis
+    else:
+        return shortSynopsis + description
+
+
+
+parser  = ArgumentParser(description = str_desc, formatter_class = RawTextHelpFormatter)
+
+parser.add_argument("-I", "--inputDir",
+                    help    = "input dir",
+                    dest    = 'inputDir')
+parser.add_argument("-i", "--inputFile",
+                    help    = "input file",
+                    dest    = 'inputFile',
+                    default = '')
+parser.add_argument("-e", "--extension",
+                    help    = "DICOM file extension",
+                    dest    = 'extension',
+                    default = '')
+parser.add_argument("-o", "--outputFileStem",
+                    help    = "output file",
+                    default = "",
+                    dest    = 'outputFileStem')
+parser.add_argument("-O", "--outputDir",
+                    help    = "output image directory",
+                    dest    = 'outputDir',
+                    default = '.')
+parser.add_argument("--printElapsedTime",
+                    help    = "print program run time",
+                    dest    = 'printElapsedTime',
+                    action  = 'store_true',
+                    default = False)
+parser.add_argument("--threads",
+                    help    = "number of threads for innermost loop processing",
+                    dest    = 'threads',
+                    default = "0")
+parser.add_argument("--outputLeafDir",
+                    help    = "formatting spec for output leaf directory",
+                    dest    = 'outputLeafDir',
+                    default = "")
+parser.add_argument("-x", "--man",
+                    help    = "man",
+                    dest    = 'man',
+                    action  = 'store_true',
+                    default = False)
+parser.add_argument("-y", "--synopsis",
+                    help    = "short synopsis",
+                    dest    = 'synopsis',
+                    action  = 'store_true',
+                    default = False)
+parser.add_argument("--json",
+                    help    = "output final return in json",
+                    dest    = 'json',
+                    action  = 'store_true',
+                    default = False)
+parser.add_argument("--followLinks",
+                    help    = "follow symbolic links",
+                    dest    = 'followLinks',
+                    action  = 'store_true',
+                    default = False)
+parser.add_argument("-v", "--verbosity",
+                    help    = "verbosity level for app",
+                    dest    = 'verbosity',
+                    default = "1")
+parser.add_argument('--version',
+                    help    = 'if specified, print version number',
+                    dest    = 'b_version',
+                    action  = 'store_true',
+                    default = False)
+
+args = parser.parse_args()
+
+if args.man or args.synopsis:
+    print(str_desc)
+    if args.man:
+        str_help     = synopsis(False)
+    else:
+        str_help     = synopsis(True)
+    print(str_help)
+    sys.exit(1)
+
+if args.b_version:
+    print("Version: %s" % str_version)
+    sys.exit(1)
+
+pudb.set_trace()
+
+pf_dicom_rev = pfdicom_rev.pfdicom_rev(
+                        inputDir            = args.inputDir,
+                        inputFile           = args.inputFile,
+                        extension           = args.extension,
+                        outputDir           = args.outputDir,
+                        outputFileStem      = args.outputFileStem,
+                        outputLeafDir       = args.outputLeafDir,
+                        threads             = args.threads,
+                        followLinks         = args.followLinks,
+                        verbosity           = args.verbosity,
+                        json                = args.json
+                    )
+
+# And now run it!
+d_pfdicom_rev = pf_dicom_rev.run(timerStart = True)
+
+if args.printElapsedTime: 
+    pf_dicom_rev.dp.qprint(
+                                "Elapsed time = %f seconds" % 
+                                d_pfdicom_rev['runTime']
+                            )
+
+sys.exit(0)
