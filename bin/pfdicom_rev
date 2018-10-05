@@ -290,7 +290,13 @@ if args.b_version:
 
 pudb.set_trace()
 
-pf_dicom_rev = pfdicom_rev.pfdicom_rev(
+# For the rev build we are going to scan the tree
+# twice: 
+#   -- once to build a tree of all the DCM files
+#   -- then to build a tree of all the JSON files
+
+# DICOM analysis
+pf_dicom_revDCM = pfdicom_rev.pfdicom_rev(
                         inputDir            = args.inputDir,
                         inputFile           = args.inputFile,
                         extension           = args.extension,
@@ -305,7 +311,31 @@ pf_dicom_rev = pfdicom_rev.pfdicom_rev(
                     )
 
 # And now run it!
-d_pfdicom_rev = pf_dicom_rev.run(timerStart = True)
+d_pfdicom_revDCM = pf_dicom_revDCM.run(
+                        timerStart          = True,
+                        func_process        = pf_dicom_revDCM.processDCM
+                    )
+
+# JSON analysis
+pf_dicom_revJSON = pfdicom_rev.pfdicom_rev(
+                        inputDir            = args.inputDir,
+                        inputFile           = args.inputFile,
+                        extension           = '.json',
+                        outputDir           = args.outputDir,
+                        outputFileStem      = args.outputFileStem,
+                        outputLeafDir       = args.outputLeafDir,
+                        tagStruct           = args.tagStruct,
+                        threads             = args.threads,
+                        followLinks         = args.followLinks,
+                        verbosity           = args.verbosity,
+                        json                = args.json
+                    )
+
+# And now run it!
+d_pfdicom_revJSON = pf_dicom_revJSON.run(
+                        timerStart          = False,
+                        func_process        = pf_dicom_revJSON.processJSON
+                    )
 
 if args.printElapsedTime: 
     pf_dicom_rev.dp.qprint(

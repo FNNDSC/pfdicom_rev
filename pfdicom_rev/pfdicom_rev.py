@@ -58,12 +58,23 @@ class pfdicom_rev(pfdicom.pfdicom):
             * response from subprocess.run() call
         """
 
-        return subprocess.run(
+        pipe = subprocess.Popen(
             astr_cmd,
             stdout  = subprocess.PIPE,
-            stderr  = subprocess.STDOUT,
+            stderr  = subprocess.PIPE,
             shell   = True
         )
+        bytes_stdout, bytes_stderr = pipe.communicate()
+        if pipe.returncode:
+            self.dp.qprint( "An error occured in calling \n%s\n" % pipe.args, 
+                            comms   = 'error',
+                            level   = 3)
+            self.dp.qprint( "The error was:\n%s\n" % bytes_stderr.decode('utf-8'),
+                            comms   = 'error',
+                            level   = 3)
+        return (bytes_stdout.decode('utf-8'), 
+                bytes_stderr.decode('utf-8'), 
+                pipe.returncode)
 
     def declare_selfvars(self):
         """
@@ -77,7 +88,9 @@ class pfdicom_rev(pfdicom.pfdicom):
         self.__name__                   = "pfdicom_rev"
         self.str_version                = "0.0.99"
 
-        self.b_anonDo                   = True
+        self.b_anonDo                   = False
+        self.str_dcm2jpgDir             = 'dcm2jpg'
+        self.str_previewFileName        = 'preview.jpg'
 
         # Tags
         self.b_tagList                  = False
@@ -205,7 +218,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         l_file              = []
         filesAnalyzed       = 0
 
-        pudb.set_trace()
+        # pudb.set_trace()
 
         for k, v in kwargs.items():
             if k == 'd_DCMRead':    d_DCMRead   = v
@@ -228,9 +241,9 @@ class pfdicom_rev(pfdicom.pfdicom):
                     d_tagsInStruct  = self.tagsInString_process(d_DCMfileRead['d_DICOM'], v)
                     str_tagValue    = d_tagsInStruct['str_result']
                     setattr(d_DCMfileRead['d_DICOM']['dcm'], k, str_tagValue)
-                l_dcm.append(d_DCMfileRead['d_DICOM']['dcm'])
-                b_status    = True
-                filesAnalyzed += 1
+            l_dcm.append(d_DCMfileRead['d_DICOM']['dcm'])
+            b_status    = True
+            filesAnalyzed += 1
 
         return {
             'status':           b_status,
@@ -257,42 +270,155 @@ class pfdicom_rev(pfdicom.pfdicom):
 
         """
 
-        pudb.set_trace()
-
         path                = at_data[0]
         d_outputInfo        = at_data[1]
         str_cwd             = os.getcwd()
         other.mkdir(self.str_outputDir)
-        filesSaved          = 0
+        anonFilesSaved      = 0
+        jpegsGenerated      = 0
         other.mkdir(path)
+        str_relPath         = path.split(self.str_outputDir+'/./')[1]
 
-        if self.b_anonDo:
+        def anonymization_do():
+            nonlocal    anonFilesSaved
             self.dp.qprint("Saving anonymized DICOMs", level = 3)
             for f, ds in zip(d_outputInfo['l_file'], d_outputInfo['l_dcm']):
                 ds.save_as('%s/%s' % (path, f))
                 self.dp.qprint("saving: %s/%s" % (path, f), level = 5)
-                filesSaved += 1
+                anonFilesSaved += 1
 
-        # Generate JPGs
-        str_
+        def jpegs_generateFromDCM():
+            nonlocal    jpegsGenerated
+            str_jpgDir          = '%s/%s' % (path, self.str_dcm2jpgDir)
+            self.dp.qprint("Generating jpgs from dcm...", 
+                            end     = '',
+                            level   = 3)
+            if not os.path.exists(str_jpgDir):
+                other.mkdir(str_jpgDir)
+            for f in d_outputInfo['l_file']:
+                str_jpgFile     = '%s/%s/%s' % (
+                                    path, 
+                                    self.str_dcm2jpgDir, 
+                                    os.path.splitext(f)[0]
+                                    )
+                str_execCmd     = self.exec_dcm2jpgConv                         + \
+                                    ' +oj +Wh 15 +Fa '                          + \
+                                    os.path.join(d_outputInfo['str_path'], f)   + \
+                                    ' ' + str_jpgFile
+                ret             = self.sys_run(str_execCmd)
+                jpegsGenerated  += 1
+            self.dp.qprint(" generated %d jpgs." % jpegsGenerated, 
+                            syslog  = False,
+                            level   = 3)
+ 
+        def jpegs_resize():
+            self.dp.qprint( "Resizing jpgs... ",
+                            end     = '',
+                            level   = 3)
+            str_execCmd         = self.exec_jpgResize                           + \
+            ' -resize 96x96 -background none -gravity center -extent 96x96 '    + \
+                                    '%s/%s/* '   % (path, self.str_dcm2jpgDir)
+            self.dp.qprint( "done", syslog = False, level = 3)
+            ret                 = self.sys_run(str_execCmd)
+
+        def jpegs_previewStripGenerate():
+            self.dp.qprint("Generating preview strip...")
+            str_execCmd         = self.exec_jpgPreview                          + \
+                                    ' -append '                                 + \
+                                    '%s/%s/* ' % (path, self.str_dcm2jpgDir)    + \
+                                    '%s/%s'     % (path, self.str_previewFileName)
+            ret                 = self.sys_run(str_execCmd)
+
+        def jsonSeriesDescription_generate():
+            # pudb.set_trace()
+            DCM                         = d_outputInfo['l_dcm'][0]
+            str_jsonFileName            = '%s.json' % path
+            try:
+                dcm_modalitiesInStudy   = DCM.ModalitiesInStudy
+            except:
+                dcm_modalitiesInStudy   = "not found"
+            json_obj = {
+                "query": {
+                    "data": [
+                        {
+                            "SeriesInstanceUID": {
+                                "value": '%s' % DCM.SeriesInstanceUID,
+                            },
+                            "uid": {
+                                "value": '%s' % DCM.SeriesInstanceUID,
+                            },
+                            "SeriesDescription": {
+                                "value": '%s' % DCM.SeriesDescription,
+                            },
+                            "StudyDescription": {
+                                "value": '%s' % DCM.StudyDescription,
+                            },
+                            "ModalitiesInStudy": {
+                                    "value": '%s' % dcm_modalitiesInStudy,
+                            },
+                            "PatientID": {
+                                "value": '%s' % DCM.PatientID,
+                            },
+                            "PatientName": {
+                                "value": '%s' % DCM.PatientName,
+                            },
+                            #  extra fun
+                            "details": {
+                                "series": {
+                                    "uid":          '%s' % DCM.SeriesInstanceUID,
+                                    "description":  '%s' % DCM.SeriesDescription,
+                                    "date":         '%s' % DCM.SeriesDate,
+                                    "data":         [str_relPath + s for s in  d_outputInfo['l_file']],
+                                    "files":        str(len(d_outputInfo['l_file'])),
+                                    "preview": {
+                                        "blob":     '',
+                                        "url":      str_relPath + "/preview.jpg",
+                                    },
+                                },
+                            },
+                        }
+                    ],
+                },
+            }
+            with open(str_jsonFileName, 'w') as f:
+                json.dump(json_obj, f, indent = 4)
+
+        if self.b_anonDo: anonymization_do()
+        jpegs_generateFromDCM()
+        jpegs_resize()
+        jpegs_previewStripGenerate()
+        jsonSeriesDescription_generate()
 
         return {
             'status':       True,
-            'filesSaved':   filesSaved
+            'filesSaved':   jpegsGenerated
         }
 
-    def process(self, **kwargs):
+    def processDCM(self, **kwargs):
         """
         A simple "alias" for calling the pftree method.
         """
         d_process       = {}
+
         d_process       = self.pf_tree.tree_process(
                             inputReadCallback       = self.inputReadCallback,
                             analysisCallback        = self.inputAnalyzeCallback,
                             outputWriteCallback     = self.outputSaveCallback,
                             persistAnalysisResults  = False
         )
-        return d_process
+
+    def processJSON(self, **kwargs):
+        """
+        A simple "alias" for calling the pftree method.
+        """
+        d_process       = {}
+
+        d_process       = self.pf_tree.tree_process(
+                            inputReadCallback       = self.inputReadCallbackJSON,
+                            analysisCallback        = self.inputAnalyzeCallbackJSON,
+                            outputWriteCallback     = self.outputSaveCallbackJSON,
+                            persistAnalysisResults  = False
+        )
 
     def run(self, *args, **kwargs):
         """
@@ -307,6 +433,8 @@ class pfdicom_rev(pfdicom.pfdicom):
         d_process       = {}
         b_timerStart    = False
 
+        func_process    = self.processDCM
+
         self.dp.qprint(
                 "Starting pfdicom_rev run... (please be patient while running)", 
                 level = 1
@@ -314,6 +442,7 @@ class pfdicom_rev(pfdicom.pfdicom):
 
         for k, v in kwargs.items():
             if k == 'timerStart':   b_timerStart    = bool(v)
+            if k == 'func_process': func_process    = v          
 
         if b_timerStart:
             other.tic()
@@ -331,7 +460,7 @@ class pfdicom_rev(pfdicom.pfdicom):
             str_startDir    = os.getcwd()
             os.chdir(self.str_inputDir)
             if b_status:
-                d_process   = self.process()
+                d_process   = func_process()
                 b_status    = b_status and d_process['status']
             os.chdir(str_startDir)
 
