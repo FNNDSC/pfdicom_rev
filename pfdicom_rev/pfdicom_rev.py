@@ -4,7 +4,8 @@ import      getpass
 import      argparse
 import      json
 import      pprint
-import      csv
+import      subprocess
+import      uuid
 
 # Project specific imports
 import      pfmisc
@@ -27,6 +28,43 @@ class pfdicom_rev(pfdicom.pfdicom):
 
     """
 
+    def externalExecutables_set(self):
+        """
+        A method to set the path/name of various executables.
+
+        These results are obviously system specific, etc. 
+
+        More sophisticated logic, if needed, should be added here.
+
+        PRECONDITIONS:
+
+            * None
+
+        POSTCONIDTIONS:
+
+            * Various names of executable helpers are set
+        """
+        self.exec_dcm2jpgConv           = '/usr/bin/dcmj2pnm'
+        self.exec_jpgResize             = '/usr/bin/mogrify'
+        self.exec_jpgPreview            = '/usr/bin/convert'
+        self.exec_dcmAnon               = '/usr/bin/dcmodify'
+
+    def sys_run(self, astr_cmd):
+        """
+        Simple method to run a command on the system.
+
+        RETURN:
+
+            * response from subprocess.run() call
+        """
+
+        return subprocess.run(
+            astr_cmd,
+            stdout  = subprocess.PIPE,
+            stderr  = subprocess.STDOUT,
+            shell   = True
+        )
+
     def declare_selfvars(self):
         """
         A block to declare self variables
@@ -38,6 +76,8 @@ class pfdicom_rev(pfdicom.pfdicom):
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
         self.str_version                = "0.0.99"
+
+        self.b_anonDo                   = True
 
         # Tags
         self.b_tagList                  = False
@@ -52,22 +92,49 @@ class pfdicom_rev(pfdicom.pfdicom):
         self.pp                         = pprint.PrettyPrinter(indent=4)
         self.verbosityLevel             = -1
 
+        # Various executable helpers
+        self.exec_dcm2jpgConv           = ''
+        self.exec_jpgResize             = ''
+        self.exec_jpgPreview            = ''
+        self.exec_dcmAnon               = ''
+
+    def anonStruct_set(self):
+        """
+        Setup the anon struct
+        """
+        self.d_tagStruct = {
+            "PatientName":      "anon",
+            "PatientID":        "anon",
+            "AccessionNumber":  "anon"
+        }
+
+
     def __init__(self, *args, **kwargs):
         """
         Main constructor for object.
         """
 
+        def tagStruct_process(str_tagStruct):
+            self.str_tagStruct          = str_tagStruct
+            if len(self.str_tagStruct):
+                self.d_tagStruct        = json.loads(str_tagStruct)
+
         def outputDir_process(str_outputDir):
             if str_outputDir == '%inputDir':
-                self.str_outputDir = self.str_inputDir
+                self.str_outputDir  = self.str_inputDir
+                kwargs['outputDir'] = self.str_inputDir
 
         # pudb.set_trace()
-        self.declare_selfvars()
 
         # Process some of the kwargs by the base class
         super().__init__(*args, **kwargs)
 
+        self.declare_selfvars()
+        self.externalExecutables_set()
+        self.anonStruct_set()
+
         for key, value in kwargs.items():
+            if key == 'tagStruct':          tagStruct_process(value)
             if key == "outputDir":          outputDir_process(value) 
             if key == 'verbosity':          self.verbosityLevel         = int(value)
 
@@ -126,13 +193,10 @@ class pfdicom_rev(pfdicom.pfdicom):
         """
         Callback for doing actual work on the read data.
 
-        In the context of 'ReV', this essentially means:
+        In the context of 'ReV', the "analysis" essentially means
+        calling an anonymization on input data
 
-            * create a JPG for each DCM
-            * resize to standard size
-            * create a preview strip
             * anonymize the DCM files in place
-            * generate a JSON summary
 
         """
         d_DCMRead           = {}
@@ -157,15 +221,16 @@ class pfdicom_rev(pfdicom.pfdicom):
             l_file      = d_DCMRead['l_file']
             self.dp.qprint("analyzing: %s" % l_file[filesAnalyzed], level = 5)
 
-
-
-            for k, v in self.d_tagStruct.items():
-                d_tagsInStruct  = self.tagsInString_process(d_DCMfileRead['d_DICOM'], v)
-                str_tagValue    = d_tagsInStruct['str_result']
-                setattr(d_DCMfileRead['d_DICOM']['dcm'], k, str_tagValue)
-            l_dcm.append(d_DCMfileRead['d_DICOM']['dcm'])
-            b_status    = True
-            filesAnalyzed += 1
+            if self.b_anonDo:
+                # For now the following are hard coded, but could in future
+                # be possibly user-specified?
+                for k, v in self.d_tagStruct.items():
+                    d_tagsInStruct  = self.tagsInString_process(d_DCMfileRead['d_DICOM'], v)
+                    str_tagValue    = d_tagsInStruct['str_result']
+                    setattr(d_DCMfileRead['d_DICOM']['dcm'], k, str_tagValue)
+                l_dcm.append(d_DCMfileRead['d_DICOM']['dcm'])
+                b_status    = True
+                filesAnalyzed += 1
 
         return {
             'status':           b_status,
@@ -182,7 +247,17 @@ class pfdicom_rev(pfdicom.pfdicom):
         In order to be thread-safe, all directory/file 
         descriptors must be *absolute* and no chdir()'s
         must ever be called!
+
+        Outputs saved:
+
+            * Anon DICOMs if anonymized
+            * JPGs of each DICOM
+            * Preview strip
+            * JSON descriptor file
+
         """
+
+        pudb.set_trace()
 
         path                = at_data[0]
         d_outputInfo        = at_data[1]
@@ -191,10 +266,15 @@ class pfdicom_rev(pfdicom.pfdicom):
         filesSaved          = 0
         other.mkdir(path)
 
-        for f, ds in zip(d_outputInfo['l_file'], d_outputInfo['l_dcm']):
-            ds.save_as('%s/%s' % (path, f))
-            self.dp.qprint("saving: %s/%s" % (path, f), level = 5)
-            filesSaved += 1
+        if self.b_anonDo:
+            self.dp.qprint("Saving anonymized DICOMs", level = 3)
+            for f, ds in zip(d_outputInfo['l_file'], d_outputInfo['l_dcm']):
+                ds.save_as('%s/%s' % (path, f))
+                self.dp.qprint("saving: %s/%s" % (path, f), level = 5)
+                filesSaved += 1
+
+        # Generate JPGs
+        str_
 
         return {
             'status':       True,
@@ -224,7 +304,7 @@ class pfdicom_rev(pfdicom.pfdicom):
 
         """
         b_status        = True
-        d_tagSub        = {}
+        d_process       = {}
         b_timerStart    = False
 
         self.dp.qprint(

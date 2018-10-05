@@ -226,6 +226,10 @@ parser.add_argument("-O", "--outputDir",
                     help    = "output image directory",
                     dest    = 'outputDir',
                     default = '.')
+parser.add_argument("-T", "--tagStruct",
+                    help    = "JSON formatted tag sub struct",
+                    dest    = 'tagStruct',
+                    default = '')
 parser.add_argument("--printElapsedTime",
                     help    = "print program run time",
                     dest    = 'printElapsedTime',
@@ -293,6 +297,7 @@ pf_dicom_rev = pfdicom_rev.pfdicom_rev(
                         outputDir           = args.outputDir,
                         outputFileStem      = args.outputFileStem,
                         outputLeafDir       = args.outputLeafDir,
+                        tagStruct           = args.tagStruct,
                         threads             = args.threads,
                         followLinks         = args.followLinks,
                         verbosity           = args.verbosity,
