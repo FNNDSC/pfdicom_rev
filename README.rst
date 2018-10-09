@@ -25,21 +25,31 @@ Overview
 
 The script accepts an ``<inputDir>`` which should be the (absolute) root dir of the ReV library. All file locations will be referenced relative to this root dir in the JSON descriptor files.
 
-``pfdicom_rev`` performs a two-pass loop over the file tree space:
+``pfdicom_rev`` performs a multi-pass loop over the file tree space:
 
-    1. Process all DICOMs:
-        - Optional anonymize
-        - Convert DCM to JPG
-        - Generate preview strip
-        - Generate a per-series description file in the series
-            root directory
+1. Process all DICOMs:
+    - Optional anonymize
+    - Convert DCM to JPG
+    - Generate preview strip
+    - Generate a per-series description file in the series root directory
 
-    2. Process all JSON series files:
-        - Generate a per-study JSON sumamry file
+2. Process all JSON series files:
+    - Generate a per-study JSON sumamry file
+
+3. Create a JSON representation of the entire data space 
+    - Based on the set of per-study JSON summary files, create a JSON tree used by the viewer to map incoming ``PatientAge`` to closest hit in the data tree.
 
 NOTE:
 
 * ``pfdicom_rev`` relies on ImageMagick for many of its operations, including the DCM to JPG conversion, JPG resize, and preview  strip creation.
+
+* In some cases, default limits for ``ImageMagick`` are too low for generating preview strips, especially if a given DICOM series has many (more than 100) DICOM files. One fix for this is to edit the ``policy.xml`` file pertaining to ``ImageMagick`` and set
+
+.. code:: xml 
+    <policy domain="resource" name="width" value="100KP"/>
+    <policy domain="resource" name="height" value="100KP"/>        
+
+Please see [here](https://imagemagick.org/script/resources.php) for more information.
 
 Installation
 ------------
