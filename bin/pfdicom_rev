@@ -41,14 +41,15 @@ str_desc = Colors.CYAN + """
 
         Recursively walk down a directory tree and process DICOM directories
         to generate JSON formatted descriptor file(s) for processing by the
-        ReV viewer.
+        ReV viewer, as well as index.html files per study.
 
                              -- version """ + \
              Colors.YELLOW + str_version + Colors.CYAN + """ --
 
         'pfdicom_rev' is a customizable and friendly DICOM directory analyzer
         that summarises information in a DICOM dir and can also produce a
-        JPG preview of files.
+        JPG preview of files, JSON series and study summary files, as well as
+        an index.html pointing to an instance of the ReV viewer.
 
         The summary information and JPG preview is specific to being processed
         by the ReV viewer.         
@@ -76,16 +77,11 @@ def synopsis(ab_shortOnly = False):
     BRIEF EXAMPLE
 
         pfdicom_rev                                         \\
-                    -I /var/www/html/normsmall -e dcm       \\
-                    -O /var/www/html/anon                   \\
-                    --tagStruct '
-                    {
-                        "PatientName":       "anonymized",
-                        "PatientID":         "%_md5|7_PatientID",
-                        "AccessionNumber":   "%_md5|10_AccessionNumber",
-                        "PatientBirthDate":  "%_strmsk|******01_PatientBirthDate"
-                    }
-                    ' --threads 0 --printElapsedTime
+                    -I /var/www/html/rev -e dcm             \\
+                    -O %inputDir                           \\
+                    --threads 0 --printElapsedTime          \\
+                    -v 3
+
     """
 
     description =  '''
@@ -94,12 +90,27 @@ def synopsis(ab_shortOnly = False):
         ``pfdicom_rev`` processes directories containing DICOM files for the
         ReV viewer.
 
-        The script accepts an ``<inputDir>``, and then from this point an 
-        ``os.walk()`` is performed to extract all the subdirs. Each subdir is 
-        examined for DICOM files (in the simplest sense by a file extension mapping) 
-        are passed to a processing method that reads and replaces specified 
-        DICOM tags, saving the result in a corresponding directory and filename
-        in the output tree.
+        The script accepts an ``<inputDir>`` which should be the (absolute)
+        root dir of the ReV library. All file locations will be referenced
+        relative to this root dir in the JSON descriptor files.
+        
+        ``pfdicom_rev`` performs a two-pass loop over the file tree space:
+
+            1. Process all DICOMs:
+                - Optional anonymize
+                - Convert DCM to JPG
+                - Generate preview strip
+                - Generate a per-series description file in the series
+                  root directory
+
+            2. Process all JSON series files:
+                - Generate a per-study JSON sumamry file
+
+        NOTE:
+
+        * ``pfdicom_rev`` relies on ImageMagick for many of its operations,
+          including the DCM to JPG conversion, JPG resize, and preview 
+          strip creation.
 
     ARGS
 
@@ -107,11 +118,6 @@ def synopsis(ab_shortOnly = False):
         Input DICOM directory to examine. By default, the first file in this
         directory is examined for its tag information. There is an implicit
         assumption that each <inputDir> contains a single DICOM series.
-
-        -i|--inputFile <inputFile>
-        An optional <inputFile> specified relative to the <inputDir>. If 
-        specified, then do not perform a directory walk, but convert only 
-        this file.
 
         -e|--extension <DICOMextension>
         An optional extension to filter the DICOM files of interest from the 
@@ -122,6 +128,9 @@ def synopsis(ab_shortOnly = False):
         to the input directory, and each "leaf" node will contain the analysis
         results.
 
+        For ReV, this is often the special directive '%inputDir' which directs
+        the system to generate all outputs in the input tree directly.
+
         [--outputLeafDir <outputLeafDirFormat>]
         If specified, will apply the <outputLeafDirFormat> to the output
         directories containing data. This is useful to blanket describe
@@ -130,23 +139,16 @@ def synopsis(ab_shortOnly = False):
 
         This is a formatting spec, so 
 
-            --outputLeafDir 'preview-%%s'
+            --outputLeafDir 'preview-%s'
 
-        where %%s is the original leaf directory node, will prefix each
+        where %s is the original leaf directory node, will prefix each
         final directory containing output with the text 'preview-' which
         can be useful in describing some features of the output set.
 
-        -F|--tagFile <JSONtagFile>
-        Parse the tags and their "subs" from a JSON formatted <JSONtagFile>.
-
         -T|--tagStruct <JSONtagStructure>
         Parse the tags and their "subs" from a JSON formatted <JSONtagStucture>
-        passed directly in the command line.
-
-        -o|--outputFileStem <outputFileStem>
-        The output file stem to store data. This should *not* have a file
-        extension, or rather, any "." in the name are considered part of 
-        the stem and are *not* considered extensions.
+        passed directly in the command line. This is used in the optional 
+        DICOM anonymization.
 
         [--threads <numThreads>]
         If specified, break the innermost analysis loop into <numThreads>
@@ -178,23 +180,16 @@ def synopsis(ab_shortOnly = False):
 
     EXAMPLES
 
-    Perform a DICOM anonymization by processing specific tags:
+    Process a tree containing DICOM files for ReV:
 
         pfdicom_rev                                         \\
-                    -I /var/www/html/normsmall -e dcm       \\
-                    -O /var/www/html/anon                   \\
-                    --tagStruct '
-                    {
-                        "PatientName":       "anonymized",
-                        "PatientID":         "%_md5|7_PatientID",
-                        "AccessionNumber":   "%_md5|10_AccessionNumber",
-                        "PatientBirthDate":  "%_strmsk|******01_PatientBirthDate"
-                    }
-                    ' --threads 0 -v 0 --json
+                    -I /var/www/html/rev -e dcm             \\
+                    -O %inputDir                            \\
+                    --threads 0 --printElapsedTime          \\
+                    -v 3
 
-        which will output only at script conclusion and will log a JSON 
-        formatted string.
-
+        which will run a DCM and JSON analysis, printing the 
+        final elapsed processing time.
 
     '''
     
@@ -313,7 +308,8 @@ pf_dicom_revDCM = pfdicom_rev.pfdicom_rev(
 # And now run it!
 d_pfdicom_revDCM = pf_dicom_revDCM.run(
                         timerStart          = True,
-                        func_process        = pf_dicom_revDCM.processDCM
+                        func_process        = pf_dicom_revDCM.processDCM,
+                        description         = 'DICOM analysis'
                     )
 
 # pudb.set_trace()
@@ -335,7 +331,8 @@ pf_dicom_revJSON = pfdicom_rev.pfdicom_rev(
 # And now run it!
 d_pfdicom_revJSON = pf_dicom_revJSON.run(
                         timerStart          = False,
-                        func_process        = pf_dicom_revJSON.processJSON
+                        func_process        = pf_dicom_revJSON.processJSON,
+                        description         = 'JSON analysis'
                     )
 
 if args.printElapsedTime: 
