@@ -43,7 +43,7 @@ NOTE:
 
 * ``pfdicom_rev`` relies on ImageMagick for many of its operations, including the DCM to JPG conversion, JPG resize, and preview  strip creation.
 
-* In some cases, default limits for ``ImageMagick`` are too low for generating preview strips, especially if a given DICOM series has many (more than 100) DICOM files. One fix for this is to edit the ``policy.xml`` file pertaining to ``ImageMagick`` and set
+* In some cases, default limits for ``ImageMagick`` are too low for generating preview strips, especially if a given DICOM series has many (more than 100) DICOM files. One fix for this is to edit the ``policy.xml`` file pertaining to ``ImageMagick`` and set the image ``width`` and ``height`` specifiers to 100 kilo-pixels (the default is about 16KP).
 
 .. code:: xml
 
