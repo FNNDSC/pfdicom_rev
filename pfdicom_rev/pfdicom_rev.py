@@ -131,6 +131,7 @@ class pfdicom_rev(pfdicom.pfdicom):
             self.str_tagStruct          = str_tagStruct
             if len(self.str_tagStruct):
                 self.d_tagStruct        = json.loads(str_tagStruct)
+                self.b_anonDo           = True
 
         # pudb.set_trace()
 
