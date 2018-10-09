@@ -11,18 +11,18 @@ def readme():
         return f.read()
 
 setup(
-      name             =   'pfdicom_tagSub',
-      version          =   '1.4.10',
-      description      =   'Process DICOM tags and performs substitutions -- part of the pf* family.',
+      name             =   'pfdicom_rev',
+      version          =   '1.0.0',
+      description      =   'Process DICOM trees and create JSON summares for the ReV viewer.',
       long_description =   readme(),
       author           =   'FNNDSC',
       author_email     =   'dev@babymri.org',
-      url              =   'https://github.com/FNNDSC/pfdicom_tagSub',
-      packages         =   ['pfdicom_tagSub'],
+      url              =   'https://github.com/FNNDSC/pfdicom_rev',
+      packages         =   ['pfdicom_rev'],
       install_requires =   ['pfdicom'],
       #test_suite       =   'nose.collector',
       #tests_require    =   ['nose'],
-      scripts          =   ['bin/pfdicom_tagSub'],
+      scripts          =   ['bin/pfdicom_rev'],
       license          =   'MIT',
       zip_safe         =   False
 )
