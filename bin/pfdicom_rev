@@ -19,7 +19,7 @@ import  pfmisc
 from    pfmisc._colors      import Colors
 from    pfmisc              import other
 
-str_version = "1.0.2"
+str_version = "1.0.4"
 str_desc = Colors.CYAN + """
 
 
@@ -119,9 +119,11 @@ def synopsis(ab_shortOnly = False):
           strip creation.
 
         * In some cases, default limits for ``ImageMagick`` are too low for
-          generating preview scripts, especially if a given DICOM series has
+          generating preview strips, especially if a given DICOM series has
           many (more than 100) DICOM files. One fix for this is to edit the
-          ``policy.xml`` file pertaining to ``ImageMagick`` and set
+          ``policy.xml`` file pertaining to ``ImageMagick`` and set the 
+          image ``width`` and ``height`` specifiers to 100 kilo-pixels (the
+          default is about 16KP).
 
             <policy domain="resource" name="width" value="100KP"/>
             <policy domain="resource" name="height" value="100KP"/>        
