@@ -91,6 +91,8 @@ class pfdicom_rev(pfdicom.pfdicom):
         self.b_anonDo                   = False
         self.str_dcm2jpgDir             = 'dcm2jpg'
         self.str_previewFileName        = 'preview.jpg'
+        self.str_studyFileName          = 'description.json'
+        self.str_serverName             = "http://fnndsc.childrens.harvard.edu"
 
         # Tags
         self.b_tagList                  = False
@@ -145,6 +147,8 @@ class pfdicom_rev(pfdicom.pfdicom):
         for key, value in kwargs.items():
             if key == 'tagStruct':          tagStruct_process(value)
             if key == 'verbosity':          self.verbosityLevel         = int(value)
+            if key == 'server':             self.str_serverName         = value
+            if key == 'studyJSON':          self.str_studyFileName      = value
 
         # Set logging
         self.dp                        = pfmisc.debug(    
@@ -459,7 +463,7 @@ class pfdicom_rev(pfdicom.pfdicom):
                                     "uid":          '%s' % DCM.SeriesInstanceUID,
                                     "description":  '%s' % DCM.SeriesDescription,
                                     "date":         '%s' % DCM.SeriesDate,
-                                    "data":         [str_relPath + s for s in  d_outputInfo['l_file']],
+                                    "data":         [str_relPath + '/' + s for s in  d_outputInfo['l_file']],
                                     "files":        str(len(d_outputInfo['l_file'])),
                                     "preview": {
                                         "blob":     '',
@@ -500,7 +504,7 @@ class pfdicom_rev(pfdicom.pfdicom):
 
         """
 
-        def str_indexHTML_Create(str_path):
+        def str_indexHTML_create(str_path):
             """
             Return a string to be saved in 'index.html' 
             """
@@ -512,14 +516,14 @@ class pfdicom_rev(pfdicom.pfdicom):
                 <html>
                     <head>
                         <title>FNNDSC</title>
-                        <meta http-equiv="refresh" content="0; URL=http://fnndsc.childrens.harvard.edu/rev/viewer?year=%s&month=%s&example=%s">
+                        <meta http-equiv="refresh" content="0; URL=%s/rev/viewer?year=%s&month=%s&example=%s">
                         <meta name="keywords" content="automatic redirection">
                     </head>
                     <body style="background: black;" text="lightgreen">
                     </body>
                 </html>
 
-            """ % (str_yr, str_mo, str_ex)
+            """ % (self.str_serverName, str_yr, str_mo, str_ex)
             return str_html
         # pudb.set_trace()
         path                = at_data[0]
@@ -539,11 +543,11 @@ class pfdicom_rev(pfdicom.pfdicom):
             'data': d_outputInfo['l_json']
         }
 
-        with open('%s/description.json' % (path), 'w') as f:
+        with open('%s/%s' % (path, self.str_studyFileName), 'w') as f:
             json.dump(json_study, f, indent = 4)
             filesSaved += 1 
         f.close()
-        str_html = str_indexHTML_Create(path)
+        str_html = str_indexHTML_create(path)
         with open('%s/index.html' % (path), 'w') as f:
             f.write(str_html)
             filesSaved += 1 
