@@ -45,7 +45,8 @@ NOTE:
 
 * In some cases, default limits for ``ImageMagick`` are too low for generating preview strips, especially if a given DICOM series has many (more than 100) DICOM files. One fix for this is to edit the ``policy.xml`` file pertaining to ``ImageMagick`` and set
 
-.. code:: xml 
+.. code:: xml
+
     <policy domain="resource" name="width" value="100KP"/>
     <policy domain="resource" name="height" value="100KP"/>        
 
