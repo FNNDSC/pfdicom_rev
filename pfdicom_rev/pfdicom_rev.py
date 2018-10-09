@@ -132,11 +132,6 @@ class pfdicom_rev(pfdicom.pfdicom):
             if len(self.str_tagStruct):
                 self.d_tagStruct        = json.loads(str_tagStruct)
 
-        def outputDir_process(str_outputDir):
-            if str_outputDir == '%inputDir':
-                self.str_outputDir  = self.str_inputDir
-                kwargs['outputDir'] = self.str_inputDir
-
         # pudb.set_trace()
 
         # Process some of the kwargs by the base class
@@ -148,7 +143,6 @@ class pfdicom_rev(pfdicom.pfdicom):
 
         for key, value in kwargs.items():
             if key == 'tagStruct':          tagStruct_process(value)
-            if key == "outputDir":          outputDir_process(value) 
             if key == 'verbosity':          self.verbosityLevel         = int(value)
 
         # Set logging
@@ -199,6 +193,53 @@ class pfdicom_rev(pfdicom.pfdicom):
             'l_file':           l_file,
             'str_path':         str_path,
             'l_DCMRead':        l_DCMRead,
+            'filesRead':        filesRead
+        }
+
+    def inputReadCallbackJSON(self, *args, **kwargs):
+        """
+        Callback for reading files from specific directory.
+
+        In the context of pfdicom_rev, this implies reading
+        JSON series description files.
+
+        """
+        str_path            = ''
+        l_file              = []
+        b_status            = True
+        l_JSONread          = []
+        filesRead           = 0
+
+        for k, v in kwargs.items():
+            if k == 'l_file':   l_file      = v
+            if k == 'path':     str_path    = v
+
+        if len(args):
+            at_data         = args[0]
+            str_path        = at_data[0]
+            l_file          = at_data[1]
+
+        # pudb.set_trace()
+
+        for f in l_file:
+            self.dp.qprint("reading: %s/%s" % (str_path, f), level = 5)
+            with open('%s/%s' % (str_path, f)) as fl:
+                try:
+                    d_json  = json.load(fl)
+                    b_json  = True
+                except:
+                    b_json  = False
+            b_status        = b_status and b_json
+            l_JSONread.append(d_json)
+            filesRead       += 1
+
+        if not len(l_file): b_status = False
+
+        return {
+            'status':           b_status,
+            'l_file':           l_file,
+            'str_path':         str_path,
+            'l_JSONread':       l_JSONread,
             'filesRead':        filesRead
         }
 
@@ -253,6 +294,51 @@ class pfdicom_rev(pfdicom.pfdicom):
             'filesAnalyzed':    filesAnalyzed
         }
 
+    def inputAnalyzeCallbackJSON(self, *args, **kwargs):
+        """
+        Callback for doing actual work on the read data.
+
+        In the context of 'ReV', the "analysis" in the JSON loop
+        essentially means combining the data in the various JSON
+        series files into one.
+
+        """
+        d_JSONread          = {}
+        b_status            = False
+        l_json              = []
+        l_file              = []
+        filesAnalyzed       = 0
+
+        # pudb.set_trace()
+
+        for k, v in kwargs.items():
+            if k == 'd_JSONread':   d_JSONread  = v
+            if k == 'path':         str_path    = v
+
+        if len(args):
+            at_data         = args[0]
+            str_path        = at_data[0]
+            d_JSONread      = at_data[1]
+
+        for d_JSONfileRead in d_JSONread['l_JSONread']:
+            str_path    = d_JSONread['str_path']
+            l_file      = d_JSONread['l_file']
+            self.dp.qprint("analyzing: %s" % l_file[filesAnalyzed], level = 5)
+            try:
+                l_json.append(d_JSONfileRead['query']['data'][0])
+            except:
+                pass
+            b_status    = True
+            filesAnalyzed += 1
+
+        return {
+            'status':           b_status,
+            'l_json':           l_json,
+            'str_path':         str_path,
+            'l_file':           l_file,
+            'filesAnalyzed':    filesAnalyzed
+        }
+
     def outputSaveCallback(self, at_data, **kwags):
         """
         Callback for saving outputs.
@@ -291,8 +377,9 @@ class pfdicom_rev(pfdicom.pfdicom):
             nonlocal    jpegsGenerated
             str_jpgDir          = '%s/%s' % (path, self.str_dcm2jpgDir)
             self.dp.qprint("Generating jpgs from dcm...", 
-                            end     = '',
-                            level   = 3)
+                            end         = '',
+                            level       = 3,
+                            methodcol   = 55)
             if not os.path.exists(str_jpgDir):
                 other.mkdir(str_jpgDir)
             for f in d_outputInfo['l_file']:
@@ -308,13 +395,14 @@ class pfdicom_rev(pfdicom.pfdicom):
                 ret             = self.sys_run(str_execCmd)
                 jpegsGenerated  += 1
             self.dp.qprint(" generated %d jpgs." % jpegsGenerated, 
-                            syslog  = False,
-                            level   = 3)
+                            syslog      = False,
+                            level       = 3)
  
         def jpegs_resize():
             self.dp.qprint( "Resizing jpgs... ",
-                            end     = '',
-                            level   = 3)
+                            end         = '',
+                            level       = 3,
+                            methodcol   = 55)
             str_execCmd         = self.exec_jpgResize                           + \
             ' -resize 96x96 -background none -gravity center -extent 96x96 '    + \
                                     '%s/%s/* '   % (path, self.str_dcm2jpgDir)
@@ -322,7 +410,9 @@ class pfdicom_rev(pfdicom.pfdicom):
             ret                 = self.sys_run(str_execCmd)
 
         def jpegs_previewStripGenerate():
-            self.dp.qprint("Generating preview strip...")
+            self.dp.qprint( "Generating preview strip...",
+                            level       = 3,
+                            methodcol   = 55)
             str_execCmd         = self.exec_jpgPreview                          + \
                                     ' -append '                                 + \
                                     '%s/%s/* ' % (path, self.str_dcm2jpgDir)    + \
@@ -394,31 +484,100 @@ class pfdicom_rev(pfdicom.pfdicom):
             'filesSaved':   jpegsGenerated
         }
 
+    def outputSaveCallbackJSON(self, at_data, **kwags):
+        """
+        Callback for saving outputs.
+
+        In order to be thread-safe, all directory/file 
+        descriptors must be *absolute* and no chdir()'s
+        must ever be called!
+
+        Outputs saved:
+
+            * JSON study descriptor file
+            * index.html
+
+        """
+
+        def str_indexHTML_Create(str_path):
+            """
+            Return a string to be saved in 'index.html' 
+            """
+            fieldFind       = lambda str_url, field: str_url.split(field)[0].split('/')[-1] 
+            str_yr          = fieldFind(str_path, '-yr')
+            str_mo          = fieldFind(str_path, '-mo')
+            str_ex          = fieldFind(str_path, '-ex')
+            str_html = """
+                <html>
+                    <head>
+                        <title>FNNDSC</title>
+                        <meta http-equiv="refresh" content="0; URL=http://fnndsc.childrens.harvard.edu/rev/viewer?year=%s&month=%s&example=%s">
+                        <meta name="keywords" content="automatic redirection">
+                    </head>
+                    <body style="background: black;" text="lightgreen">
+                    </body>
+                </html>
+
+            """ % (str_yr, str_mo, str_ex)
+            return str_html
+        # pudb.set_trace()
+        path                = at_data[0]
+        d_outputInfo        = at_data[1]
+        str_cwd             = os.getcwd()
+        other.mkdir(self.str_outputDir)
+        jsonFilesSaved      = 0
+        other.mkdir(path)
+        str_relPath         = './'
+        try:
+            str_relPath     = path.split(self.str_outputDir+'/./')[1]
+        except:
+            str_relPath     = './'
+        filesSaved          = 0
+
+        json_study          = {
+            'data': d_outputInfo['l_json']
+        }
+
+        with open('%s/description.json' % (path), 'w') as f:
+            json.dump(json_study, f, indent = 4)
+            filesSaved += 1 
+        f.close()
+        str_html = str_indexHTML_Create(path)
+        with open('%s/index.html' % (path), 'w') as f:
+            f.write(str_html)
+            filesSaved += 1 
+        f.close()
+
+        return {
+            'status':       True,
+            'filesSaved':   filesSaved
+        }
+
     def processDCM(self, **kwargs):
         """
         A simple "alias" for calling the pftree method.
         """
         d_process       = {}
-
         d_process       = self.pf_tree.tree_process(
                             inputReadCallback       = self.inputReadCallback,
                             analysisCallback        = self.inputAnalyzeCallback,
                             outputWriteCallback     = self.outputSaveCallback,
                             persistAnalysisResults  = False
         )
+        return d_process
 
     def processJSON(self, **kwargs):
         """
         A simple "alias" for calling the pftree method.
         """
         d_process       = {}
-
         d_process       = self.pf_tree.tree_process(
                             inputReadCallback       = self.inputReadCallbackJSON,
                             analysisCallback        = self.inputAnalyzeCallbackJSON,
                             outputWriteCallback     = self.outputSaveCallbackJSON,
                             persistAnalysisResults  = False
         )
+        return d_process
 
     def run(self, *args, **kwargs):
         """
