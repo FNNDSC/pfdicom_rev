@@ -49,7 +49,7 @@ NOTE:
     <policy domain="resource" name="width" value="100KP"/>
     <policy domain="resource" name="height" value="100KP"/>        
 
-Please see [here](https://imagemagick.org/script/resources.php) for more information.
+Please see `here<https://imagemagick.org/script/resources.php>`_ for more information.
 
 Installation
 ------------
