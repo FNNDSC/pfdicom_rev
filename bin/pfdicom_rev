@@ -288,7 +288,7 @@ if args.b_version:
     print("Version: %s" % str_version)
     sys.exit(1)
 
-pudb.set_trace()
+# pudb.set_trace()
 
 # For the rev build we are going to scan the tree
 # twice: 
@@ -316,6 +316,7 @@ d_pfdicom_revDCM = pf_dicom_revDCM.run(
                         func_process        = pf_dicom_revDCM.processDCM
                     )
 
+# pudb.set_trace()
 # JSON analysis
 pf_dicom_revJSON = pfdicom_rev.pfdicom_rev(
                         inputDir            = args.inputDir,
@@ -338,9 +339,9 @@ d_pfdicom_revJSON = pf_dicom_revJSON.run(
                     )
 
 if args.printElapsedTime: 
-    pf_dicom_rev.dp.qprint(
+    pf_dicom_revDCM.dp.qprint(
                                 "Elapsed time = %f seconds" % 
-                                d_pfdicom_rev['runTime']
+                                d_pfdicom_revDCM['runTime']
                             )
 
 sys.exit(0)
