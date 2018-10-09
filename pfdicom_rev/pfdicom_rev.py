@@ -593,15 +593,18 @@ class pfdicom_rev(pfdicom.pfdicom):
         b_timerStart    = False
 
         func_process    = self.processDCM
-
-        self.dp.qprint(
-                "Starting pfdicom_rev run... (please be patient while running)", 
-                level = 1
-                )
+        str_analysis    = 'DICOM analysis'
 
         for k, v in kwargs.items():
             if k == 'timerStart':   b_timerStart    = bool(v)
-            if k == 'func_process': func_process    = v          
+            if k == 'func_process': func_process    = v
+            if k == 'description':  str_analysis    = v          
+
+        self.dp.qprint(
+                "Starting pfdicom_rev %s... (please be patient while running)" % \
+                    str_analysis, 
+                level = 1
+                )
 
         if b_timerStart:
             other.tic()
@@ -633,7 +636,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         if self.b_json:
             self.ret_dump(d_ret, **kwargs)
 
-        self.dp.qprint('Returning from pfdicom_rev run...', level = 1)
+        self.dp.qprint('Returning from pfdicom_rev %s...' % str_analysis, level = 1)
 
         return d_ret
         
