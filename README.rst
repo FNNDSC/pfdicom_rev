@@ -118,6 +118,16 @@ Command line arguments
         passed directly in the command line. This is used in the optional 
         DICOM anonymization.
 
+        -S|--server <server>
+        The name of the server hosting the ReV viewer.
+
+        Defaults to 'http://fnndsc.tch.harvard.edu'.
+
+        --studyJSON <studyJSONfile>
+        The name of the study JSON file. 
+
+        Defaults to 'description.json'.
+
         [--threads <numThreads>]
         If specified, break the innermost analysis loop into <numThreads>
         thr        -I|--inputDir <inputDir>
