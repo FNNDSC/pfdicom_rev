@@ -256,27 +256,10 @@ class pfdicom_rev(pfdicom.pfdicom):
         DICOM files and returning the dcm data set.
 
         """
-        str_path            = ''
-        l_file              = []
         b_status            = True
-        l_JSONread          = []
-        filesRead           = 0
-
-        for k, v in kwargs.items():
-            if k == 'l_file':   l_file      = v
-            if k == 'path':     str_path    = v
-
-        if len(args):
-            at_data         = args[0]
-            str_path        = at_data[0]
-            l_file          = at_data[1]
 
         return {
-            'status':           b_status,
-            'l_file':           l_file,
-            'str_path':         str_path,
-            'l_JSONread':       l_JSONread,
-            'filesRead':        filesRead
+            'status':           b_status
         }
 
 
@@ -381,29 +364,10 @@ class pfdicom_rev(pfdicom.pfdicom):
         Callback for doing actual work on the read data.
 
         """
-        d_JSONread          = {}
-        b_status            = False
-        l_json              = []
-        l_file              = []
-        filesAnalyzed       = 0
-
-        # pudb.set_trace()
-        
-        for k, v in kwargs.items():
-            if k == 'd_JSONread':   d_JSONread  = v
-            if k == 'path':         str_path    = v
-        
-        if len(args):
-            at_data         = args[0]
-            str_path        = at_data[0]
-            d_JSONread      = at_data[1]
+        b_status            = True
 
         return {
-            'status':           b_status,
-            'l_json':           l_json,
-            'str_path':         str_path,
-            'l_file':           l_file,
-            'filesAnalyzed':    filesAnalyzed
+            'status':           b_status
         }
 
 
@@ -635,9 +599,6 @@ class pfdicom_rev(pfdicom.pfdicom):
             * index.html
 
         """
-
-        
-        #pudb.set_trace()           
         filesSaved          = 0
 
         return {
@@ -685,9 +646,9 @@ class pfdicom_rev(pfdicom.pfdicom):
         d_library = {
             "data": list(self.pf_tree.d_inputTree.keys())
             }
-        self.dp.qprint("analyzing: %s" % d_library, level = 1)
+        self.dp.qprint("mapping: %s" % d_library, level = 1)
         with open("%s/map.json" % self.str_inputDir, 'w') as outfile:
-            json.dump(d_library, outfile)
+            json.dump(d_library, outfile, indent = 4)
         
         return d_process        
     
