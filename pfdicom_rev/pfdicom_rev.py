@@ -271,22 +271,6 @@ class pfdicom_rev(pfdicom.pfdicom):
             str_path        = at_data[0]
             l_file          = at_data[1]
 
-        #pudb.set_trace()
-        '''
-        for f in l_file:
-            self.dp.qprint("reading: %s/%s" % (str_path, f), level = 5)
-            with open('%s/%s' % (str_path, f)) as fl:
-                try:
-                    d_json  = json.load(fl)
-                    b_json  = True
-                except:
-                    b_json  = False
-            b_status        = b_status and b_json
-            l_JSONread.append(d_json)
-            filesRead       += 1
-        
-        if not len(l_file): b_status = False
-        '''
         return {
             'status':           b_status,
             'l_file':           l_file,
@@ -396,10 +380,6 @@ class pfdicom_rev(pfdicom.pfdicom):
         """
         Callback for doing actual work on the read data.
 
-        In the context of 'ReV', the "analysis" in the JSON loop
-        essentially means combining the data in the various JSON
-        series files into one.
-
         """
         d_JSONread          = {}
         b_status            = False
@@ -417,18 +397,7 @@ class pfdicom_rev(pfdicom.pfdicom):
             at_data         = args[0]
             str_path        = at_data[0]
             d_JSONread      = at_data[1]
-        '''
-        for d_JSONfileRead in d_JSONread['l_JSONread']:
-            str_path    = d_JSONread['str_path']
-            l_file      = d_JSONread['l_file']
-            self.dp.qprint("analyzing: %s" % l_file[filesAnalyzed], level = 5)
-            try:
-                l_json.append(str_path)
-            except:
-                pass
-            b_status    = True
-            filesAnalyzed += 1
-        '''
+
         return {
             'status':           b_status,
             'l_json':           l_json,
@@ -669,24 +638,8 @@ class pfdicom_rev(pfdicom.pfdicom):
 
         
         #pudb.set_trace()           
-        path                = at_data[0]
-        d_outputInfo        = at_data[1]
-        str_cwd             = os.getcwd()
-        other.mkdir(self.str_outputDir)
-        jsonFilesSaved      = 0
-        other.mkdir(path)
-        str_relPath         = './'
-        try:
-            str_relPath     = path.split(self.str_outputDir+'/./')[1]
-        except:
-            str_relPath     = './'
         filesSaved          = 0
-        '''
-        with open('%s/map.json' % (path), 'w') as f:
-            json.dump(d_outputInfo, f, indent = 4)
-            filesSaved += 1 
-        f.close()
-        '''
+
         return {
             'status':       True,
             'filesSaved':   filesSaved
