@@ -248,6 +248,54 @@ class pfdicom_rev(pfdicom.pfdicom):
             'filesRead':        filesRead
         }
 
+    def inputReadCallbackMAP(self, *args, **kwargs):
+        """
+        Callback for reading files from specific directory.
+
+        In the context of pfdicom_rev, this implies reading
+        DICOM files and returning the dcm data set.
+
+        """
+        str_path            = ''
+        l_file              = []
+        b_status            = True
+        l_JSONread          = []
+        filesRead           = 0
+
+        for k, v in kwargs.items():
+            if k == 'l_file':   l_file      = v
+            if k == 'path':     str_path    = v
+
+        if len(args):
+            at_data         = args[0]
+            str_path        = at_data[0]
+            l_file          = at_data[1]
+
+        #pudb.set_trace()
+        '''
+        for f in l_file:
+            self.dp.qprint("reading: %s/%s" % (str_path, f), level = 5)
+            with open('%s/%s' % (str_path, f)) as fl:
+                try:
+                    d_json  = json.load(fl)
+                    b_json  = True
+                except:
+                    b_json  = False
+            b_status        = b_status and b_json
+            l_JSONread.append(d_json)
+            filesRead       += 1
+        
+        if not len(l_file): b_status = False
+        '''
+        return {
+            'status':           b_status,
+            'l_file':           l_file,
+            'str_path':         str_path,
+            'l_JSONread':       l_JSONread,
+            'filesRead':        filesRead
+        }
+
+
     def inputAnalyzeCallback(self, *args, **kwargs):
         """
         Callback for doing actual work on the read data.
@@ -343,6 +391,52 @@ class pfdicom_rev(pfdicom.pfdicom):
             'l_file':           l_file,
             'filesAnalyzed':    filesAnalyzed
         }
+
+    def inputAnalyzeCallbackMAP(self, *args, **kwargs):
+        """
+        Callback for doing actual work on the read data.
+
+        In the context of 'ReV', the "analysis" in the JSON loop
+        essentially means combining the data in the various JSON
+        series files into one.
+
+        """
+        d_JSONread          = {}
+        b_status            = False
+        l_json              = []
+        l_file              = []
+        filesAnalyzed       = 0
+
+        # pudb.set_trace()
+        
+        for k, v in kwargs.items():
+            if k == 'd_JSONread':   d_JSONread  = v
+            if k == 'path':         str_path    = v
+        
+        if len(args):
+            at_data         = args[0]
+            str_path        = at_data[0]
+            d_JSONread      = at_data[1]
+        '''
+        for d_JSONfileRead in d_JSONread['l_JSONread']:
+            str_path    = d_JSONread['str_path']
+            l_file      = d_JSONread['l_file']
+            self.dp.qprint("analyzing: %s" % l_file[filesAnalyzed], level = 5)
+            try:
+                l_json.append(str_path)
+            except:
+                pass
+            b_status    = True
+            filesAnalyzed += 1
+        '''
+        return {
+            'status':           b_status,
+            'l_json':           l_json,
+            'str_path':         str_path,
+            'l_file':           l_file,
+            'filesAnalyzed':    filesAnalyzed
+        }
+
 
     def outputSaveCallback(self, at_data, **kwags):
         """
@@ -516,7 +610,7 @@ class pfdicom_rev(pfdicom.pfdicom):
                 <html>
                     <head>
                         <title>FNNDSC</title>
-                        <meta http-equiv="refresh" content="0; URL=%s/rev/viewer?year=%s&month=%s&example=%s">
+                        <meta http-equiv="refresh" content="0; URL=%s?year=%s&month=%s&example=%s">
                         <meta name="keywords" content="automatic redirection">
                     </head>
                     <body style="background: black;" text="lightgreen">
@@ -525,7 +619,7 @@ class pfdicom_rev(pfdicom.pfdicom):
 
             """ % (self.str_serverName, str_yr, str_mo, str_ex)
             return str_html
-        # pudb.set_trace()
+        #pudb.set_trace()
         path                = at_data[0]
         d_outputInfo        = at_data[1]
         str_cwd             = os.getcwd()
@@ -558,6 +652,46 @@ class pfdicom_rev(pfdicom.pfdicom):
             'filesSaved':   filesSaved
         }
 
+    def outputSaveCallbackMAP(self, at_data, **kwags):
+        """
+        Callback for saving outputs.
+
+        In order to be thread-safe, all directory/file 
+        descriptors must be *absolute* and no chdir()'s
+        must ever be called!
+
+        Outputs saved:
+
+            * JSON study descriptor file
+            * index.html
+
+        """
+
+        
+        #pudb.set_trace()           
+        path                = at_data[0]
+        d_outputInfo        = at_data[1]
+        str_cwd             = os.getcwd()
+        other.mkdir(self.str_outputDir)
+        jsonFilesSaved      = 0
+        other.mkdir(path)
+        str_relPath         = './'
+        try:
+            str_relPath     = path.split(self.str_outputDir+'/./')[1]
+        except:
+            str_relPath     = './'
+        filesSaved          = 0
+        '''
+        with open('%s/map.json' % (path), 'w') as f:
+            json.dump(d_outputInfo, f, indent = 4)
+            filesSaved += 1 
+        f.close()
+        '''
+        return {
+            'status':       True,
+            'filesSaved':   filesSaved
+        }
+
     def processDCM(self, **kwargs):
         """
         A simple "alias" for calling the pftree method.
@@ -583,7 +717,27 @@ class pfdicom_rev(pfdicom.pfdicom):
                             persistAnalysisResults  = False
         )
         return d_process
-
+    
+    def processMAP(self, **kwargs):
+        """
+        A simple "alias" for calling the pftree method.
+        """
+        d_process       = {}
+        d_process       = self.pf_tree.tree_process(
+                            inputReadCallback       = self.inputReadCallbackMAP,
+                            analysisCallback        = self.inputAnalyzeCallbackMAP,
+                            outputWriteCallback     = self.outputSaveCallbackMAP,
+                            persistAnalysisResults  = False
+        )
+        d_library = {
+            "data": list(self.pf_tree.d_inputTree.keys())
+            }
+        self.dp.qprint("analyzing: %s" % d_library, level = 1)
+        with open("%s/map.json" % self.str_inputDir, 'w') as outfile:
+            json.dump(d_library, outfile)
+        
+        return d_process        
+    
     def run(self, *args, **kwargs):
         """
         The run method calls the base class run() to 
