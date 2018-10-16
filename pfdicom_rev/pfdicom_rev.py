@@ -248,6 +248,21 @@ class pfdicom_rev(pfdicom.pfdicom):
             'filesRead':        filesRead
         }
 
+    def inputReadCallbackMAP(self, *args, **kwargs):
+        """
+        Callback for reading files from specific directory.
+
+        In the context of pfdicom_rev, this implies reading
+        DICOM files and returning the dcm data set.
+
+        """
+        b_status            = True
+
+        return {
+            'status':           b_status
+        }
+
+
     def inputAnalyzeCallback(self, *args, **kwargs):
         """
         Callback for doing actual work on the read data.
@@ -343,6 +358,18 @@ class pfdicom_rev(pfdicom.pfdicom):
             'l_file':           l_file,
             'filesAnalyzed':    filesAnalyzed
         }
+
+    def inputAnalyzeCallbackMAP(self, *args, **kwargs):
+        """
+        Callback for doing actual work on the read data.
+
+        """
+        b_status            = True
+
+        return {
+            'status':           b_status
+        }
+
 
     def outputSaveCallback(self, at_data, **kwags):
         """
@@ -516,7 +543,7 @@ class pfdicom_rev(pfdicom.pfdicom):
                 <html>
                     <head>
                         <title>FNNDSC</title>
-                        <meta http-equiv="refresh" content="0; URL=%s/rev/viewer?year=%s&month=%s&example=%s">
+                        <meta http-equiv="refresh" content="0; URL=%s?year=%s&month=%s&example=%s">
                         <meta name="keywords" content="automatic redirection">
                     </head>
                     <body style="background: black;" text="lightgreen">
@@ -525,7 +552,7 @@ class pfdicom_rev(pfdicom.pfdicom):
 
             """ % (self.str_serverName, str_yr, str_mo, str_ex)
             return str_html
-        # pudb.set_trace()
+        #pudb.set_trace()
         path                = at_data[0]
         d_outputInfo        = at_data[1]
         str_cwd             = os.getcwd()
@@ -558,6 +585,27 @@ class pfdicom_rev(pfdicom.pfdicom):
             'filesSaved':   filesSaved
         }
 
+    def outputSaveCallbackMAP(self, at_data, **kwags):
+        """
+        Callback for saving outputs.
+
+        In order to be thread-safe, all directory/file 
+        descriptors must be *absolute* and no chdir()'s
+        must ever be called!
+
+        Outputs saved:
+
+            * JSON study descriptor file
+            * index.html
+
+        """
+        filesSaved          = 0
+
+        return {
+            'status':       True,
+            'filesSaved':   filesSaved
+        }
+
     def processDCM(self, **kwargs):
         """
         A simple "alias" for calling the pftree method.
@@ -583,7 +631,27 @@ class pfdicom_rev(pfdicom.pfdicom):
                             persistAnalysisResults  = False
         )
         return d_process
-
+    
+    def processMAP(self, **kwargs):
+        """
+        A simple "alias" for calling the pftree method.
+        """
+        d_process       = {}
+        d_process       = self.pf_tree.tree_process(
+                            inputReadCallback       = self.inputReadCallbackMAP,
+                            analysisCallback        = self.inputAnalyzeCallbackMAP,
+                            outputWriteCallback     = self.outputSaveCallbackMAP,
+                            persistAnalysisResults  = False
+        )
+        d_library = {
+            "data": list(self.pf_tree.d_inputTree.keys())
+            }
+        self.dp.qprint("mapping: %s" % d_library, level = 1)
+        with open("%s/map.json" % self.str_inputDir, 'w') as outfile:
+            json.dump(d_library, outfile, indent = 4)
+        
+        return d_process        
+    
     def run(self, *args, **kwargs):
         """
         The run method calls the base class run() to 

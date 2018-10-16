@@ -376,6 +376,31 @@ d_pfdicom_revJSON = pf_dicom_revJSON.run(
                         description         = 'JSON analysis'
                     )
 
+# pudb.set_trace()
+# Map building
+pf_dicom_revMAP = pfdicom_rev.pfdicom_rev(
+                        inputDir            = args.inputDir,
+                        inputFile           = args.inputFile,
+                        extension           = args.studyJSON,
+                        outputDir           = args.outputDir,
+                        outputFileStem      = args.outputFileStem,
+                        outputLeafDir       = args.outputLeafDir,
+                        tagStruct           = args.tagStruct,
+                        server              = args.server,
+                        studyJSON           = args.studyJSON,
+                        threads             = args.threads,
+                        followLinks         = args.followLinks,
+                        verbosity           = args.verbosity,
+                        json                = args.json
+                    )
+
+# And now run it!
+d_pfdicom_revMAP = pf_dicom_revMAP.run(
+                        timerStart          = False,
+                        func_process        = pf_dicom_revMAP.processMAP,
+                        description         = 'MAP building'
+                    )
+
 if args.printElapsedTime: 
     pf_dicom_revDCM.dp.qprint(
                                 "Elapsed time = %f seconds" % 
