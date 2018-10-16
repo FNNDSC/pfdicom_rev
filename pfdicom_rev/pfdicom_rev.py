@@ -6,6 +6,7 @@ import      json
 import      pprint
 import      subprocess
 import      uuid
+import      shutil
 
 # Project specific imports
 import      pfmisc
@@ -89,7 +90,8 @@ class pfdicom_rev(pfdicom.pfdicom):
         self.str_version                = "0.0.99"
 
         self.b_anonDo                   = False
-        self.str_dcm2jpgDir             = 'dcm2jpg'
+        self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
+        self.str_dcm2jpgDirResize       = 'dcm2jpgResize'
         self.str_previewFileName        = 'preview.jpg'
         self.str_studyFileName          = 'description.json'
         self.str_serverName             = "http://fnndsc.childrens.harvard.edu"
@@ -407,7 +409,7 @@ class pfdicom_rev(pfdicom.pfdicom):
 
         def jpegs_generateFromDCM():
             nonlocal    jpegsGenerated
-            str_jpgDir          = '%s/%s' % (path, self.str_dcm2jpgDir)
+            str_jpgDir          = '%s/%s' % (path, self.str_dcm2jpgDirRaw)
             self.dp.qprint("Generating jpgs from dcm...", 
                             end         = '',
                             level       = 3,
@@ -417,7 +419,7 @@ class pfdicom_rev(pfdicom.pfdicom):
             for f in d_outputInfo['l_file']:
                 str_jpgFile     = '%s/%s/%s' % (
                                     path, 
-                                    self.str_dcm2jpgDir, 
+                                    self.str_dcm2jpgDirRaw, 
                                     os.path.splitext(f)[0]
                                     )
                 str_execCmd     = self.exec_dcm2jpgConv                         + \
@@ -435,11 +437,34 @@ class pfdicom_rev(pfdicom.pfdicom):
                             end         = '',
                             level       = 3,
                             methodcol   = 55)
+            shutil.copytree(
+                '%s/%s' % (path, self.str_dcm2jpgDirRaw),
+                '%s/%s' % (path, self.str_dcm2jpgDirResize)
+            )
             str_execCmd         = self.exec_jpgResize                           + \
             ' -resize 96x96 -background none -gravity center -extent 96x96 '    + \
-                                    '%s/%s/* '   % (path, self.str_dcm2jpgDir)
+                                    '%s/%s/* '   % (path, self.str_dcm2jpgDirResize)
             self.dp.qprint( "done", syslog = False, level = 3)
             ret                 = self.sys_run(str_execCmd)
+
+        def jpegs_middleInSet_tag():
+            self.dp.qprint( "Tagging 'middle' jpg... ",
+                            end         = '',
+                            level       = 3,
+                            methodcol   = 55)
+            # pudb.set_trace()
+            l_jpgFiles    = [ \
+                f for f in os.listdir('%s/%s' % (path, self.str_dcm2jpgDirRaw)) \
+                if os.path.isfile('%s/%s/%s' % (path, self.str_dcm2jpgDirRaw, f)) \
+            ]
+            str_jpgMiddle   = l_jpgFiles[int(len(l_jpgFiles)/2)]
+            str_series      = os.path.basename(path)
+            shutil.copyfile(
+                '%s/%s/%s'      % (path, self.str_dcm2jpgDirRaw, str_jpgMiddle),
+                '%s/%s/middle-%s.jpg'  % (path, self.str_dcm2jpgDirRaw, str_series)
+            )
+            self.dp.qprint( '%s -> %s.jpg' % (str_jpgMiddle, str_series), 
+                            syslog = False, level = 3)
 
         def jpegs_previewStripGenerate():
             self.dp.qprint( "Generating preview strip...",
@@ -447,14 +472,16 @@ class pfdicom_rev(pfdicom.pfdicom):
                             methodcol   = 55)
             str_execCmd         = self.exec_jpgPreview                          + \
                                     ' -append '                                 + \
-                                    '%s/%s/* ' % (path, self.str_dcm2jpgDir)    + \
+                                    '%s/%s/* ' % (path, self.str_dcm2jpgDirResize)    + \
                                     '%s/%s'     % (path, self.str_previewFileName)
             ret                 = self.sys_run(str_execCmd)
 
         def jsonSeriesDescription_generate():
-            # pudb.set_trace()
+            pudb.set_trace()
             DCM                         = d_outputInfo['l_dcm'][0]
             str_jsonFileName            = '%s.json' % path
+            str_ex                      = os.path.basename(os.path.dirname(str_relPath))
+            str_monthFileName           = '%s/%s.txt' % (os.path.dirname(os.path.dirname(path)),str_ex)
             try:
                 dcm_modalitiesInStudy   = DCM.ModalitiesInStudy
             except:
@@ -504,10 +531,13 @@ class pfdicom_rev(pfdicom.pfdicom):
             }
             with open(str_jsonFileName, 'w') as f:
                 json.dump(json_obj, f, indent = 4)
+            with open(str_monthFileName, 'a') as f:
+                f.write(str_jsonFileName + '\n')
 
         if self.b_anonDo: anonymization_do()
         jpegs_generateFromDCM()
         jpegs_resize()
+        jpegs_middleInSet_tag()
         jpegs_previewStripGenerate()
         jsonSeriesDescription_generate()
 
