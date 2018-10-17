@@ -208,7 +208,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         Callback for reading files from specific directory.
 
         In the context of pfdicom_rev, this implies reading
-        JSON series description files.
+        various contextual JSON files.
 
         """
         str_path            = ''
@@ -361,6 +361,40 @@ class pfdicom_rev(pfdicom.pfdicom):
             'filesAnalyzed':    filesAnalyzed
         }
 
+    def inputAnalyzeCallbackJSONex(self, *args, **kwargs):
+        """
+        Callback for doing actual work on the read data.
+
+        In the context of 'ReV', the "analysis" for the 'ex' 
+        JSON files simply entails passing the input parameters
+        straight back to the caller so as to be available to 
+        the output stage.
+
+        """
+        d_JSONread          = {}
+        b_status            = True
+        filesAnalyzed       = 0
+
+        # pudb.set_trace()
+
+        for k, v in kwargs.items():
+            if k == 'd_JSONread':   d_JSONread  = v
+            if k == 'path':         str_path    = v
+
+        if len(args):
+            at_data         = args[0]
+            str_path        = at_data[0]
+            d_JSONread      = at_data[1]
+
+        if not d_JSONread:  b_status    = False
+        else: filesAnalyzed += 1
+
+        return {
+            'status':           b_status,
+            'd_JSONread':       d_JSONread,
+            'filesAnalyzed':    filesAnalyzed
+        }
+
     def inputAnalyzeCallbackMAP(self, *args, **kwargs):
         """
         Callback for doing actual work on the read data.
@@ -459,12 +493,17 @@ class pfdicom_rev(pfdicom.pfdicom):
             ]
             str_jpgMiddle   = l_jpgFiles[int(len(l_jpgFiles)/2)]
             str_series      = os.path.basename(path)
+            str_srcFile     = '%s/%s/%s' % \
+                                (path, self.str_dcm2jpgDirRaw, str_jpgMiddle)
+            str_destFile    = '%s/%s/middle-%s.jpg' % \
+                                (path, self.str_dcm2jpgDirRaw, str_series)
             shutil.copyfile(
-                '%s/%s/%s'      % (path, self.str_dcm2jpgDirRaw, str_jpgMiddle),
-                '%s/%s/middle-%s.jpg'  % (path, self.str_dcm2jpgDirRaw, str_series)
+                str_srcFile,
+                str_destFile
             )
             self.dp.qprint( '%s -> %s.jpg' % (str_jpgMiddle, str_series), 
                             syslog = False, level = 3)
+            return (str_srcFile, str_destFile)
 
         def jpegs_previewStripGenerate():
             self.dp.qprint( "Generating preview strip...",
@@ -477,11 +516,9 @@ class pfdicom_rev(pfdicom.pfdicom):
             ret                 = self.sys_run(str_execCmd)
 
         def jsonSeriesDescription_generate():
-            pudb.set_trace()
+            # pudb.set_trace()
             DCM                         = d_outputInfo['l_dcm'][0]
-            str_jsonFileName            = '%s.json' % path
-            str_ex                      = os.path.basename(os.path.dirname(str_relPath))
-            str_monthFileName           = '%s/%s.txt' % (os.path.dirname(os.path.dirname(path)),str_ex)
+            str_jsonFileName            = '%s-series.json' % path
             try:
                 dcm_modalitiesInStudy   = DCM.ModalitiesInStudy
             except:
@@ -531,15 +568,41 @@ class pfdicom_rev(pfdicom.pfdicom):
             }
             with open(str_jsonFileName, 'w') as f:
                 json.dump(json_obj, f, indent = 4)
-            with open(str_monthFileName, 'a') as f:
-                f.write(str_jsonFileName + '\n')
+
+        def jsonExampleSummary_generate(str_image):
+
+            def newSet_create(str_ex, str_image):
+                d_set       = {
+                    'name': str_ex,
+                    'imageLocation': [str_image]
+                }
+                return d_set
+
+            # if the ex.json file exists, read it and append
+            # the image location to the internal list,
+            # otherwise create a new file.
+            d_summary                   = {}
+            str_ex                      = os.path.basename(os.path.dirname(str_relPath))
+            str_monthFileName           = '%s/%s.json' % (os.path.dirname(os.path.dirname(path)),'ex')
+            if os.path.exists(str_monthFileName):
+                with open(str_monthFileName) as jf:
+                    d_summary = json.load(jf)
+                if str_ex in d_summary:
+                    d_summary[str_ex]['imageLocation'].append(str_image)
+                else:
+                    d_summary[str_ex] = newSet_create(str_ex, str_image)
+            else:
+                d_summary[str_ex]       = newSet_create(str_ex, str_image)
+            with open(str_monthFileName, 'w') as mf:
+                json.dump(d_summary, mf, indent = 4)
 
         if self.b_anonDo: anonymization_do()
         jpegs_generateFromDCM()
         jpegs_resize()
-        jpegs_middleInSet_tag()
+        str_srcImage, str_destImage = jpegs_middleInSet_tag()
         jpegs_previewStripGenerate()
         jsonSeriesDescription_generate()
+        jsonExampleSummary_generate(str_destImage)
 
         return {
             'status':       True,
@@ -615,6 +678,110 @@ class pfdicom_rev(pfdicom.pfdicom):
             'filesSaved':   filesSaved
         }
 
+    def outputSaveCallbackJSONex(self, at_data, **kwags):
+        """
+        Callback for saving outputs.
+
+        In order to be thread-safe, all directory/file 
+        descriptors must be *absolute* and no chdir()'s
+        must ever be called!
+
+        Outputs saved:
+
+            * JSON study descriptor file
+            * index.html
+
+        """
+
+        def table_generate(lstr_images):
+            """
+            Generate a table of thumbnails about a list of images
+            """
+            lstr_i = [i.split('mo/')[1] for i in lstr_images]
+            str_tableStyle = """
+            <style type="text/css">
+            .tg  {border-collapse:collapse;border-spacing:0;}
+            .tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:black;}
+            .tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:black;}
+            .tg .tg-0lax{text-align:left;vertical-align:top}
+            </style>
+            """
+            # Create the header row
+            str_th = ""
+            for str_image in lstr_i:
+                str_header = str_image.split('ex/')[1].split('/dcm2jpg')[0]
+                str_header = str_header.split('-')[0]
+                str_th += """<th class="tg-0lax">%s</th>""" % str_header
+            # Now create the image row
+            str_td = ""
+            for str_image in lstr_i:
+                str_htmlImage   = '<img src="%s" style="width=128px;height=128px;">' % str_image
+                str_td          += """<td class="tg-0lax">%s</th>""" % str_htmlImage
+            # And combine into a table:
+            str_table = """
+            %s
+            <table class="tg">
+               <tr>
+               %s
+               </tr>
+               <tr>
+               %s
+               </tr>
+            </table>
+            """ % (str_tableStyle, str_th, str_td)
+            return str_table
+
+        def str_indexHTML_create(d_ex):
+            """
+            Return a string to be saved in 'index.html' 
+            """
+            str_html        = """
+<!DOCTYPE html>
+<html>
+<head>
+        <title>DCM tags: 0081-1.3.12.2.1107.5.2.32.35235.2009100511500692053535334.dcm</title>
+</head>
+
+<body style = "background-color: #1d1f21; color: white">
+            """
+            str_table = ""
+            for str_key, d_singleEx in d_ex.items():
+                l_images = d_singleEx['imageLocation']
+                str_table += table_generate(l_images)
+            str_html += """
+            %s
+</body>
+</html>
+            """ % str_table
+
+            return str_html
+
+        pudb.set_trace()
+        path                = at_data[0]
+        d_JSONex            = at_data[1]
+        str_cwd             = os.getcwd()
+        other.mkdir(self.str_outputDir)
+        jsonFilesSaved      = 0
+        other.mkdir(path)
+        str_relPath         = './'
+        try:
+            str_relPath     = path.split(self.str_outputDir+'/./')[1]
+        except:
+            str_relPath     = './'
+        filesSaved          = 0
+
+        str_html = str_indexHTML_create(d_JSONex['d_JSONread']['l_JSONread'][0])
+        with open('%s/index.html' % (path), 'w') as f:
+            f.write(str_html)
+            filesSaved += 1 
+        f.close()
+
+        return {
+            'status':       True,
+            'filesSaved':   filesSaved
+        }
+
+
     def outputSaveCallbackMAP(self, at_data, **kwags):
         """
         Callback for saving outputs.
@@ -661,6 +828,19 @@ class pfdicom_rev(pfdicom.pfdicom):
                             persistAnalysisResults  = False
         )
         return d_process
+
+    def processJSONex(self, **kwargs):
+        """
+        A simple "alias" for calling the pftree method.
+        """
+        d_process       = {}
+        d_process       = self.pf_tree.tree_process(
+                            inputReadCallback       = self.inputReadCallbackJSON,
+                            analysisCallback        = self.inputAnalyzeCallbackJSONex,
+                            outputWriteCallback     = self.outputSaveCallbackJSONex,
+                            persistAnalysisResults  = False
+        )
+        return d_process        
     
     def processMAP(self, **kwargs):
         """

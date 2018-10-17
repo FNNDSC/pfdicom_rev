@@ -322,10 +322,24 @@ if args.b_version:
 
 # pudb.set_trace()
 
+#
 # For the rev build we are going to scan the tree
-# twice: 
-#   -- once to build a tree of all the DCM files
-#   -- then to build a tree of all the JSON files
+# multiple times, each scan targeting differnt
+# file types:
+#  
+#   -- 1] analyize all the DCM files
+#       * convert to JPG
+#       * create JSON per exmaple series-level descriptors
+#       * create JSON per month example-level descriptors
+#   -- 2] analyze all the JSON series-level descriptors
+#       * create study-level JSON descriptors
+#   -- 3] analyze all the JSON per month example-level descriptors
+#       * create simple overview per-month index.html that shows
+#         per-example thumbnails
+#   -- 4] analyze all JSON study level descriptors
+#       * create tree map for mapping of arbitrary patient age to
+#         closest hits in tree
+#
 
 # DICOM analysis
 pf_dicom_revDCM = pfdicom_rev.pfdicom_rev(
@@ -343,20 +357,17 @@ pf_dicom_revDCM = pfdicom_rev.pfdicom_rev(
                         verbosity           = args.verbosity,
                         json                = args.json
                     )
-
-# And now run it!
 d_pfdicom_revDCM = pf_dicom_revDCM.run(
                         timerStart          = True,
                         func_process        = pf_dicom_revDCM.processDCM,
                         description         = 'DICOM analysis'
                     )
 
-# pudb.set_trace()
-# JSON analysis
+# Per-series JSON analysis
 pf_dicom_revJSON = pfdicom_rev.pfdicom_rev(
                         inputDir            = args.inputDir,
                         inputFile           = args.inputFile,
-                        extension           = '.json',
+                        extension           = 'series.json',
                         outputDir           = args.outputDir,
                         outputFileStem      = args.outputFileStem,
                         outputLeafDir       = args.outputLeafDir,
@@ -368,16 +379,36 @@ pf_dicom_revJSON = pfdicom_rev.pfdicom_rev(
                         verbosity           = args.verbosity,
                         json                = args.json
                     )
-
-# And now run it!
 d_pfdicom_revJSON = pf_dicom_revJSON.run(
                         timerStart          = False,
                         func_process        = pf_dicom_revJSON.processJSON,
                         description         = 'JSON analysis'
                     )
 
-# pudb.set_trace()
-# Map building
+# Per-month per example JSON analysis
+pf_dicom_revJSONex = pfdicom_rev.pfdicom_rev(
+                        inputDir            = args.inputDir,
+                        inputFile           = args.inputFile,
+                        extension           = 'ex.json',
+                        outputDir           = args.outputDir,
+                        outputFileStem      = args.outputFileStem,
+                        outputLeafDir       = args.outputLeafDir,
+                        tagStruct           = args.tagStruct,
+                        server              = args.server,
+                        studyJSON           = args.studyJSON,
+                        threads             = args.threads,
+                        followLinks         = args.followLinks,
+                        verbosity           = args.verbosity,
+                        json                = args.json
+                    )
+pudb.set_trace()
+d_pfdicom_revJSONex = pf_dicom_revJSONex.run(
+                        timerStart          = False,
+                        func_process        = pf_dicom_revJSONex.processJSONex,
+                        description         = 'JSONex analysis'
+                    )
+
+# Per-study JSON analysis
 pf_dicom_revMAP = pfdicom_rev.pfdicom_rev(
                         inputDir            = args.inputDir,
                         inputFile           = args.inputFile,
@@ -393,8 +424,6 @@ pf_dicom_revMAP = pfdicom_rev.pfdicom_rev(
                         verbosity           = args.verbosity,
                         json                = args.json
                     )
-
-# And now run it!
 d_pfdicom_revMAP = pf_dicom_revMAP.run(
                         timerStart          = False,
                         func_process        = pf_dicom_revMAP.processMAP,
