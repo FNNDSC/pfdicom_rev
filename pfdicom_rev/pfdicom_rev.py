@@ -715,9 +715,9 @@ class pfdicom_rev(pfdicom.pfdicom):
             .tg {border-collapse:collapse;border-spacing:0;}
             .tg td{font-family:Arial, sans-serif;font-size:14px;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
             .tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
-            .tg tr:hover{cursor: pointer; background-color: #222;}
+            .tg tr:hover{cursor: pointer; background-color: #fff;}
             .tg .tg-0lax{text-align:left;vertical-align:middle;}
-            a {text-decoration: none; color: #fff;}
+            a {text-decoration: none; color: #999;}
             </style>
             """
             # Create the header row
@@ -762,6 +762,7 @@ class pfdicom_rev(pfdicom.pfdicom):
 
 <body style = "background-color: #1d1f21; color: white">
     <h1 style="font-family: Arial, sans-serif;">%s</h1>
+    <p style="font-family: Arian, sans-serif;">Click on an image set below.</p>
     <br>
             """ % (str_heading, str_heading)
             str_table = ""
