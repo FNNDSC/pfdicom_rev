@@ -25,7 +25,7 @@ Overview
 
 The script accepts an ``<inputDir>`` which should be the (absolute) root dir of the ReV library. All file locations will be referenced relative to this root dir in the JSON descriptor files.
 
-``pfdicom_rev`` performs a mulit-pass loop over the file tree space as defined in the [--stage <stage>] flag below.
+``pfdicom_rev`` performs a mulit-pass loop over the file tree space as defined in the ``[--stage <stage>]`` flag below.
 
 NOTE:
 
