@@ -49,10 +49,8 @@ str_desc = Colors.CYAN + """
         'pfdicom_rev' is a customizable and friendly DICOM directory analyzer
         that summarises information in a DICOM dir and can also produce a
         JPG preview of files, JSON series and study summary files, as well as
-        an index.html pointing to an instance of the ReV viewer.
-
-        The summary information and JPG preview is specific to being processed
-        by the ReV viewer.         
+        per month and per example index.html files pointing to a relevant 
+        instance of the ReV viewer.
 
 """ + Colors.NO_COLOUR
 
