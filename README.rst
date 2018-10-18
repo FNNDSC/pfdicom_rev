@@ -25,19 +25,7 @@ Overview
 
 The script accepts an ``<inputDir>`` which should be the (absolute) root dir of the ReV library. All file locations will be referenced relative to this root dir in the JSON descriptor files.
 
-``pfdicom_rev`` performs a multi-pass loop over the file tree space:
-
-1. Process all DICOMs:
-    - Optional anonymize
-    - Convert DCM to JPG
-    - Generate preview strip
-    - Generate a per-series description file in the series root directory
-
-2. Process all JSON series files:
-    - Generate a per-study JSON sumamry file
-
-3. Create a JSON representation of the entire data space 
-    - Based on the set of per-study JSON summary files, create a JSON tree used by the viewer to map incoming ``PatientAge`` to closest hit in the data tree.
+``pfdicom_rev`` performs a mulit-pass loop over the file tree space as defined in the [--stage <stage>] flag below.
 
 NOTE:
 
@@ -197,7 +185,7 @@ Command line arguments
 Examples
 --------
 
-    Process a tree containing DICOM files for ReV:
+Process a tree containing DICOM files for ReV:
 
 .. code:: bash
 
