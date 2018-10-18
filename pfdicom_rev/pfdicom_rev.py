@@ -67,6 +67,9 @@ class pfdicom_rev(pfdicom.pfdicom):
         )
         bytes_stdout, bytes_stderr = pipe.communicate()
         if pipe.returncode:
+            self.dp.qprint( "\n",
+                            level   = 3,
+                            syslog  = False)
             self.dp.qprint( "An error occured in calling \n%s\n" % pipe.args, 
                             comms   = 'error',
                             level   = 3)
@@ -482,6 +485,8 @@ class pfdicom_rev(pfdicom.pfdicom):
             ret                 = self.sys_run(str_execCmd)
 
         def jpegs_middleInSet_tag():
+            str_srcFile         = ""
+            str_destFile        = ""
             self.dp.qprint( "Tagging 'middle' jpg... ",
                             end         = '',
                             level       = 3,
@@ -491,18 +496,23 @@ class pfdicom_rev(pfdicom.pfdicom):
                 f for f in os.listdir('%s/%s' % (path, self.str_dcm2jpgDirRaw)) \
                 if os.path.isfile('%s/%s/%s' % (path, self.str_dcm2jpgDirRaw, f)) \
             ]
-            str_jpgMiddle   = l_jpgFiles[int(len(l_jpgFiles)/2)]
-            str_series      = os.path.basename(path)
-            str_srcFile     = '%s/%s/%s' % \
-                                (path, self.str_dcm2jpgDirRaw, str_jpgMiddle)
-            str_destFile    = '%s/%s/middle-%s.jpg' % \
-                                (path, self.str_dcm2jpgDirRaw, str_series)
-            shutil.copyfile(
-                str_srcFile,
-                str_destFile
-            )
-            self.dp.qprint( '%s -> %s.jpg' % (str_jpgMiddle, str_series), 
-                            syslog = False, level = 3)
+            if len(l_jpgFiles):
+                try:
+                    str_jpgMiddle   = l_jpgFiles[int(len(l_jpgFiles)/2)]
+                except:
+                    str_jpgMiddle   = l_jpgFiles[0]
+
+                str_series      = os.path.basename(path)
+                str_srcFile     = '%s/%s/%s' % \
+                                    (path, self.str_dcm2jpgDirRaw, str_jpgMiddle)
+                str_destFile    = '%s/%s/middle-%s.jpg' % \
+                                    (path, self.str_dcm2jpgDirRaw, str_series)
+                shutil.copyfile(
+                    str_srcFile,
+                    str_destFile
+                )
+                self.dp.qprint( '%s -> %s.jpg' % (str_jpgMiddle, str_series), 
+                                syslog = False, level = 3)
             return (str_srcFile, str_destFile)
 
         def jpegs_previewStripGenerate():
@@ -693,30 +703,36 @@ class pfdicom_rev(pfdicom.pfdicom):
 
         """
 
-        def table_generate(lstr_images):
+        def table_generate(str_title, lstr_images):
             """
             Generate a table of thumbnails about a list of images
             """
-            lstr_i = [i.split('mo/')[1] for i in lstr_images]
-            str_tableStyle = """
+            lstr_images     = [i for i in lstr_images if 'mo/' in i]
+            lstr_i          = [i.split('mo/')[1] for i in lstr_images]
+            str_tableStyle  = """
             <style type="text/css">
-            .tg  {border-collapse:collapse;border-spacing:0;}
-            .tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:black;}
-            .tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:black;}
-            .tg .tg-0lax{text-align:left;vertical-align:top}
+            .tg {background-color: #000;}
+            .tg {border-collapse:collapse;border-spacing:0;}
+            .tg td{font-family:Arial, sans-serif;font-size:14px;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
+            .tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
+            .tg tr:hover{cursos: pointer; background-color: #222;}
+            .tg .tg-0lax{text-align:left;vertical-align:middle;}
+            a {text-decoration: none; color: #fff;}
             </style>
             """
             # Create the header row
             str_th = ""
+            str_th += """<th class="tg-0lax" style="text-align: center;"></th>\n"""
             for str_image in lstr_i:
                 str_header = str_image.split('ex/')[1].split('/dcm2jpg')[0]
-                str_header = str_header.split('-')[0]
-                str_th += """<th class="tg-0lax">%s</th>""" % str_header
+                str_header = str_header.split('-')[0][0:14]
+                str_th += """<th class="tg-0lax" style="text-align: center;">%s</th>\n""" % str_header
             # Now create the image row
             str_td = ""
+            str_td += """<td class="tg-0lax" style="font-size: 18px; padding 0px 10px"><a href=%s>%s</a</td>\n""" % (str_title, str_title)
             for str_image in lstr_i:
-                str_htmlImage   = '<img src="%s" style="width=128px;height=128px;">' % str_image
-                str_td          += """<td class="tg-0lax">%s</th>""" % str_htmlImage
+                str_htmlImage   = '<img src="%s" width="128" height="128";">' % str_image
+                str_td          += """<td class="tg-0lax">%s</td>\n""" % str_htmlImage
             # And combine into a table:
             str_table = """
             %s
@@ -728,10 +744,11 @@ class pfdicom_rev(pfdicom.pfdicom):
                %s
                </tr>
             </table>
+            <br>
             """ % (str_tableStyle, str_th, str_td)
             return str_table
 
-        def str_indexHTML_create(d_ex):
+        def str_indexHTML_create(str_heading, d_ex):
             """
             Return a string to be saved in 'index.html' 
             """
@@ -739,24 +756,35 @@ class pfdicom_rev(pfdicom.pfdicom):
 <!DOCTYPE html>
 <html>
 <head>
-        <title>DCM tags: 0081-1.3.12.2.1107.5.2.32.35235.2009100511500692053535334.dcm</title>
+        <title>%s</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 </head>
 
 <body style = "background-color: #1d1f21; color: white">
-            """
+    <h1 style="font-family: Arial, sans-serif;">%s</h1>
+    <br>
+            """ % (str_heading, str_heading)
             str_table = ""
-            for str_key, d_singleEx in d_ex.items():
+            for str_key, d_singleEx in sorted(d_ex.items()):
                 l_images = d_singleEx['imageLocation']
-                str_table += table_generate(l_images)
+                str_table += table_generate(str_key, l_images)
             str_html += """
             %s
+<script>
+    $(".tg tr").click(function(){
+        var href = $(this).find("a").attr("href");
+        if(href) {
+            window.location = href;
+        }
+    });
+</script>
 </body>
 </html>
             """ % str_table
 
             return str_html
 
-        pudb.set_trace()
+        # pudb.set_trace()
         path                = at_data[0]
         d_JSONex            = at_data[1]
         str_cwd             = os.getcwd()
@@ -770,7 +798,10 @@ class pfdicom_rev(pfdicom.pfdicom):
             str_relPath     = './'
         filesSaved          = 0
 
-        str_html = str_indexHTML_create(d_JSONex['d_JSONread']['l_JSONread'][0])
+        str_html = str_indexHTML_create(
+                        str_relPath,
+                        d_JSONex['d_JSONread']['l_JSONread'][0]
+        )
         with open('%s/index.html' % (path), 'w') as f:
             f.write(str_html)
             filesSaved += 1 
