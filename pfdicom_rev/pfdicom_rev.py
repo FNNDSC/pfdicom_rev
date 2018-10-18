@@ -715,7 +715,7 @@ class pfdicom_rev(pfdicom.pfdicom):
             .tg {border-collapse:collapse;border-spacing:0;}
             .tg td{font-family:Arial, sans-serif;font-size:14px;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
             .tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
-            .tg tr:hover{cursos: pointer; background-color: #222;}
+            .tg tr:hover{cursor: pointer; background-color: #222;}
             .tg .tg-0lax{text-align:left;vertical-align:middle;}
             a {text-decoration: none; color: #fff;}
             </style>
