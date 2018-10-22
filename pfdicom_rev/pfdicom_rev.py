@@ -90,7 +90,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         #
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
-        self.str_version                = "2.0.4"
+        self.str_version                = "2.0.6"
 
         self.b_anonDo                   = False
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
@@ -460,7 +460,7 @@ class pfdicom_rev(pfdicom.pfdicom):
                                     os.path.splitext(f)[0]
                                     )
                 str_execCmd     = self.exec_dcm2jpgConv                         + \
-                                    ' +oj +Wh 15 +Fa '                          + \
+                                    ' +oj +Wi 1 +Fa '                           + \
                                     os.path.join(d_outputInfo['str_path'], f)   + \
                                     ' ' + str_jpgFile
                 ret             = self.sys_run(str_execCmd)
