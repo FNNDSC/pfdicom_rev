@@ -19,7 +19,7 @@ import  pfmisc
 from    pfmisc._colors      import Colors
 from    pfmisc              import other
 
-str_version = "1.0.6"
+str_version = "2.0.6"
 str_desc = Colors.CYAN + """
 
 
@@ -49,10 +49,8 @@ str_desc = Colors.CYAN + """
         'pfdicom_rev' is a customizable and friendly DICOM directory analyzer
         that summarises information in a DICOM dir and can also produce a
         JPG preview of files, JSON series and study summary files, as well as
-        an index.html pointing to an instance of the ReV viewer.
-
-        The summary information and JPG preview is specific to being processed
-        by the ReV viewer.         
+        per month and per example index.html files pointing to a relevant 
+        instance of the ReV viewer.
 
 """ + Colors.NO_COLOUR
 
@@ -67,7 +65,13 @@ def synopsis(ab_shortOnly = False):
 
         pfdicom_rev                                         \\
                      -I|--inputDir <inputDir>               \\
-                    [-e|--extension <DICOMextension>]       \\
+                    [-e|--extension <extension>]            \\
+                     -O|--outputDir <outputDir>             \\
+                    [--outputLeafDir <outputLeafDirFormat>] \\
+                    [-T|--tagStruct <JSONtagStructure>]     \\
+                    [-S|--server <server>]                  \\
+                    [--stage <stage>]                       \\
+                    [--studyJSON <studyJSONfile>]           \\
                     [--threads <numThreads>]                \\
                     [-x|--man]                              \\
                     [-y|--synopsis]                         \\
@@ -94,23 +98,8 @@ def synopsis(ab_shortOnly = False):
         root dir of the ReV library. All file locations will be referenced
         relative to this root dir in the JSON descriptor files.
         
-        ``pfdicom_rev`` performs a two-pass loop over the file tree space:
-
-            1. Process all DICOMs:
-                - Optional anonymize
-                - Convert DCM to JPG
-                - Generate preview strip
-                - Generate a per-series description file in the series
-                  root directory
-
-            2. Process all JSON series files:
-                - Generate a per-study JSON sumamry file
-
-            3. Create a JSON representation of the entire data space 
-                - Based on the set of per-study JSON summary files, create 
-                  a JSON tree used by the viewer to map incoming ``PatientAge`` 
-                  to closest hit in the data tree.
-
+        ``pfdicom_rev`` performs a mulit-pass loop over the file tree space as
+        defined in the [--stage <stage>] flag below.
 
         NOTE:
 
@@ -138,11 +127,11 @@ def synopsis(ab_shortOnly = False):
         directory is examined for its tag information. There is an implicit
         assumption that each <inputDir> contains a single DICOM series.
 
-        -e|--extension <DICOMextension>
+        [-e|--extension <DICOMextension>]
         An optional extension to filter the DICOM files of interest from the 
         <inputDir>.
 
-        [-O|--outputDir <outputDir>]
+        -O|--outputDir <outputDir>
         The output root directory that will contain a tree structure identical
         to the input directory, and each "leaf" node will contain the analysis
         results.
@@ -164,17 +153,56 @@ def synopsis(ab_shortOnly = False):
         final directory containing output with the text 'preview-' which
         can be useful in describing some features of the output set.
 
-        -T|--tagStruct <JSONtagStructure>
+        [-T|--tagStruct <JSONtagStructure>]
         Parse the tags and their "subs" from a JSON formatted <JSONtagStucture>
         passed directly in the command line. This is used in the optional 
         DICOM anonymization.
 
-        -S|--server <server>
+        [-S|--server <server>]
         The name of the server hosting the ReV viewer.
 
         Defaults to 'http://fnndsc.tch.harvard.edu'.
 
-        --studyJSON <studyJSONfile>
+        [--stage <stage>]
+        Stage to execute -- mostly for debugging purposes and useful if running a 
+        particular stage repeatedly. There are some caveats to this -- mostly that
+        stages are serially dependent, thus running "--stage 4" off the bat will
+        not work since previous stages have not completed.
+
+        The actual thread of stage flow and dependencies are:
+
+
+
+                                      /--stage 2--\ 
+                                     /             \ 
+                            stage 1--               --stage 4
+                                     \             /
+                                      \--stage 3--/ 
+
+
+            [1] analyize all the DCM files in the <inputDir>
+                *   convert each DCM to JPG (native)
+                *   resize all JPGs to 96x96 and generate preview strip
+                *   tag middle JPG in series based on series length
+                *   create JSON per example series-level descriptors:
+                        * declare location of actual series DCM files
+                *   create JSON per month example-level descriptors
+                        * declare location of middle thumbnail JPGs
+
+            [2] analyze all the JSON series-level descriptors from stage [1]
+                *   create study-level JSON descriptors that summarize
+                    all series JSON data into one file
+
+            [3] analyze all the JSON per month example-level descriptors
+                from stage [1]
+                *   create simple overview per-month index.html that shows
+                    per-example thumbnails
+
+            [4] analyze all JSON study level descriptors from stage [2]
+                *   create tree map for mapping of arbitrary patient age to
+                    closest hits in tree
+
+        [--studyJSON <studyJSONfile>]
         The name of the study JSON file. 
 
         Defaults to 'description.json'.
@@ -195,7 +223,7 @@ def synopsis(ab_shortOnly = False):
         [--followLinks]
         If specified, follow symbolic links.
 
-        -v|--verbosity <level>
+        [-v|--verbosity <level>]
         Set the app verbosity level. 
 
             0: No internal output;
@@ -258,6 +286,10 @@ parser.add_argument("-S", "--server",
                     help    = "address of viewer server",
                     dest    = 'server',
                     default = 'http://fnndsc.childrens.harvard.edu')
+parser.add_argument("--stage",
+                    help    = "processing stage to execute",
+                    dest    = 'stage',
+                    default = 'all')
 parser.add_argument("--studyJSON",
                     help    = "name of the JSON study descriptor file",
                     dest    = 'studyJSON',
@@ -322,84 +354,98 @@ if args.b_version:
 
 # pudb.set_trace()
 
-# For the rev build we are going to scan the tree
-# twice: 
-#   -- once to build a tree of all the DCM files
-#   -- then to build a tree of all the JSON files
+if args.stage == 'all' or args.stage == '1':
+    # DICOM analysis
+    pf_dicom_revDCM = pfdicom_rev.pfdicom_rev(
+                            inputDir            = args.inputDir,
+                            inputFile           = args.inputFile,
+                            extension           = args.extension,
+                            outputDir           = args.outputDir,
+                            outputFileStem      = args.outputFileStem,
+                            outputLeafDir       = args.outputLeafDir,
+                            tagStruct           = args.tagStruct,
+                            server              = args.server,
+                            studyJSON           = args.studyJSON,
+                            threads             = args.threads,
+                            followLinks         = args.followLinks,
+                            verbosity           = args.verbosity,
+                            json                = args.json
+                        )
+    d_pfdicom_revDCM = pf_dicom_revDCM.run(
+                            timerStart          = True,
+                            func_process        = pf_dicom_revDCM.processDCM,
+                            description         = 'DICOM analysis'
+                        )
 
-# DICOM analysis
-pf_dicom_revDCM = pfdicom_rev.pfdicom_rev(
-                        inputDir            = args.inputDir,
-                        inputFile           = args.inputFile,
-                        extension           = args.extension,
-                        outputDir           = args.outputDir,
-                        outputFileStem      = args.outputFileStem,
-                        outputLeafDir       = args.outputLeafDir,
-                        tagStruct           = args.tagStruct,
-                        server              = args.server,
-                        studyJSON           = args.studyJSON,
-                        threads             = args.threads,
-                        followLinks         = args.followLinks,
-                        verbosity           = args.verbosity,
-                        json                = args.json
-                    )
+if args.stage == 'all' or args.stage == '2':
+    # Per-series JSON analysis
+    pf_dicom_revJSON = pfdicom_rev.pfdicom_rev(
+                            inputDir            = args.inputDir,
+                            inputFile           = args.inputFile,
+                            extension           = 'series.json',
+                            outputDir           = args.outputDir,
+                            outputFileStem      = args.outputFileStem,
+                            outputLeafDir       = args.outputLeafDir,
+                            tagStruct           = args.tagStruct,
+                            server              = args.server,
+                            studyJSON           = args.studyJSON,
+                            threads             = args.threads,
+                            followLinks         = args.followLinks,
+                            verbosity           = args.verbosity,
+                            json                = args.json
+                        )
+    d_pfdicom_revJSON = pf_dicom_revJSON.run(
+                            timerStart          = False,
+                            func_process        = pf_dicom_revJSON.processJSON,
+                            description         = 'JSON analysis'
+                        )
 
-# And now run it!
-d_pfdicom_revDCM = pf_dicom_revDCM.run(
-                        timerStart          = True,
-                        func_process        = pf_dicom_revDCM.processDCM,
-                        description         = 'DICOM analysis'
-                    )
+if args.stage == 'all' or args.stage == '3':
+    # Per-month per example JSON analysis
+    pf_dicom_revJSONex = pfdicom_rev.pfdicom_rev(
+                            inputDir            = args.inputDir,
+                            inputFile           = args.inputFile,
+                            extension           = 'ex.json',
+                            outputDir           = args.outputDir,
+                            outputFileStem      = args.outputFileStem,
+                            outputLeafDir       = args.outputLeafDir,
+                            tagStruct           = args.tagStruct,
+                            server              = args.server,
+                            studyJSON           = args.studyJSON,
+                            threads             = args.threads,
+                            followLinks         = args.followLinks,
+                            verbosity           = args.verbosity,
+                            json                = args.json
+                        )
+    # pudb.set_trace()
+    d_pfdicom_revJSONex = pf_dicom_revJSONex.run(
+                            timerStart          = False,
+                            func_process        = pf_dicom_revJSONex.processJSONex,
+                            description         = 'JSONex analysis'
+                        )
 
-# pudb.set_trace()
-# JSON analysis
-pf_dicom_revJSON = pfdicom_rev.pfdicom_rev(
-                        inputDir            = args.inputDir,
-                        inputFile           = args.inputFile,
-                        extension           = '.json',
-                        outputDir           = args.outputDir,
-                        outputFileStem      = args.outputFileStem,
-                        outputLeafDir       = args.outputLeafDir,
-                        tagStruct           = args.tagStruct,
-                        server              = args.server,
-                        studyJSON           = args.studyJSON,
-                        threads             = args.threads,
-                        followLinks         = args.followLinks,
-                        verbosity           = args.verbosity,
-                        json                = args.json
-                    )
-
-# And now run it!
-d_pfdicom_revJSON = pf_dicom_revJSON.run(
-                        timerStart          = False,
-                        func_process        = pf_dicom_revJSON.processJSON,
-                        description         = 'JSON analysis'
-                    )
-
-# pudb.set_trace()
-# Map building
-pf_dicom_revMAP = pfdicom_rev.pfdicom_rev(
-                        inputDir            = args.inputDir,
-                        inputFile           = args.inputFile,
-                        extension           = args.studyJSON,
-                        outputDir           = args.outputDir,
-                        outputFileStem      = args.outputFileStem,
-                        outputLeafDir       = args.outputLeafDir,
-                        tagStruct           = args.tagStruct,
-                        server              = args.server,
-                        studyJSON           = args.studyJSON,
-                        threads             = args.threads,
-                        followLinks         = args.followLinks,
-                        verbosity           = args.verbosity,
-                        json                = args.json
-                    )
-
-# And now run it!
-d_pfdicom_revMAP = pf_dicom_revMAP.run(
-                        timerStart          = False,
-                        func_process        = pf_dicom_revMAP.processMAP,
-                        description         = 'MAP building'
-                    )
+if args.stage == 'all' or args.stage == '4':
+    # Per-study JSON analysis
+    pf_dicom_revMAP = pfdicom_rev.pfdicom_rev(
+                            inputDir            = args.inputDir,
+                            inputFile           = args.inputFile,
+                            extension           = args.studyJSON,
+                            outputDir           = args.outputDir,
+                            outputFileStem      = args.outputFileStem,
+                            outputLeafDir       = args.outputLeafDir,
+                            tagStruct           = args.tagStruct,
+                            server              = args.server,
+                            studyJSON           = args.studyJSON,
+                            threads             = args.threads,
+                            followLinks         = args.followLinks,
+                            verbosity           = args.verbosity,
+                            json                = args.json
+                        )
+    d_pfdicom_revMAP = pf_dicom_revMAP.run(
+                            timerStart          = False,
+                            func_process        = pf_dicom_revMAP.processMAP,
+                            description         = 'MAP building'
+                        )
 
 if args.printElapsedTime: 
     pf_dicom_revDCM.dp.qprint(

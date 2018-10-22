@@ -25,19 +25,7 @@ Overview
 
 The script accepts an ``<inputDir>`` which should be the (absolute) root dir of the ReV library. All file locations will be referenced relative to this root dir in the JSON descriptor files.
 
-``pfdicom_rev`` performs a multi-pass loop over the file tree space:
-
-1. Process all DICOMs:
-    - Optional anonymize
-    - Convert DCM to JPG
-    - Generate preview strip
-    - Generate a per-series description file in the series root directory
-
-2. Process all JSON series files:
-    - Generate a per-study JSON sumamry file
-
-3. Create a JSON representation of the entire data space 
-    - Based on the set of per-study JSON summary files, create a JSON tree used by the viewer to map incoming ``PatientAge`` to closest hit in the data tree.
+``pfdicom_rev`` performs a mulit-pass loop over the file tree space as defined in the ``[--stage <stage>]`` flag below.
 
 NOTE:
 
@@ -81,17 +69,16 @@ Command line arguments
 
 .. code:: html
 
-
         -I|--inputDir <inputDir>
         Input DICOM directory to examine. By default, the first file in this
         directory is examined for its tag information. There is an implicit
         assumption that each <inputDir> contains a single DICOM series.
 
-        -e|--extension <DICOMextension>
+        [-e|--extension <DICOMextension>]
         An optional extension to filter the DICOM files of interest from the 
         <inputDir>.
 
-        [-O|--outputDir <outputDir>]
+        -O|--outputDir <outputDir>
         The output root directory that will contain a tree structure identical
         to the input directory, and each "leaf" node will contain the analysis
         results.
@@ -113,67 +100,59 @@ Command line arguments
         final directory containing output with the text 'preview-' which
         can be useful in describing some features of the output set.
 
-        -T|--tagStruct <JSONtagStructure>
+        [-T|--tagStruct <JSONtagStructure>]
         Parse the tags and their "subs" from a JSON formatted <JSONtagStucture>
         passed directly in the command line. This is used in the optional 
         DICOM anonymization.
 
-        -S|--server <server>
+        [-S|--server <server>]
         The name of the server hosting the ReV viewer.
 
         Defaults to 'http://fnndsc.tch.harvard.edu'.
 
-        --studyJSON <studyJSONfile>
+        [--stage <stage>]
+        Stage to execute -- mostly for debugging purposes and useful if running a 
+        particular stage repeatedly. There are some caveats to this -- mostly that
+        stages are serially dependent, thus running "--stage 4" off the bat will
+        not work since previous stages have not completed.
+
+        The actual thread of stage flow and dependencies are:
+
+
+
+                                      /--stage 2--\ 
+                                     /             \ 
+                            stage 1--               --stage 4
+                                     \             /
+                                      \--stage 3--/ 
+
+
+            [1] analyize all the DCM files in the <inputDir>
+                *   convert each DCM to JPG (native)
+                *   resize all JPGs to 96x96 and generate preview strip
+                *   tag middle JPG in series based on series length
+                *   create JSON per example series-level descriptors:
+                        * declare location of actual series DCM files
+                *   create JSON per month example-level descriptors
+                        * declare location of middle thumbnail JPGs
+
+            [2] analyze all the JSON series-level descriptors from stage [1]
+                *   create study-level JSON descriptors that summarize
+                    all series JSON data into one file
+
+            [3] analyze all the JSON per month example-level descriptors
+                from stage [1]
+                *   create simple overview per-month index.html that shows
+                    per-example thumbnails
+
+            [4] analyze all JSON study level descriptors from stage [2]
+                *   create tree map for mapping of arbitrary patient age to
+                    closest hits in tree
+
+        [--studyJSON <studyJSONfile>]
         The name of the study JSON file. 
 
         Defaults to 'description.json'.
-
-        [--threads <numThreads>]
-        If specified, break the innermost analysis loop into <numThreads>
-        thr        -I|--inputDir <inputDir>
-        Input DICOM directory to examine. By default, the first file in this
-        directory is examined for its tag information. There is an implicit
-        assumption that each <inputDir> contains a single DICOM series.
-
-        -i|--inputFile <inputFile>
-        An optional <inputFile> specified relative to the <inputDir>. If 
-        specified, then do not perform a directory walk, but convert only 
-        this file.
-
-        -e|--extension <DICOMextension>
-        An optional extension to filter the DICOM files of interest from the 
-        <inputDir>.
-
-        [-O|--outputDir <outputDir>]
-        The output root directory that will contain a tree structure identical
-        to the input directory, and each "leaf" node will contain the analysis
-        results.
-
-        -F|--tagFile <JSONtagFile>
-        Parse the tags and their "subs" from a JSON formatted <JSONtagFile>.
-
-        -T|--tagStruct <JSONtagStructure>
-        Parse the tags and their "subs" from a JSON formatted <JSONtagStucture>
-        passed directly in the command line.
-
-        -o|--outputFileStem <outputFileStem>
-        The output file stem to store data. This should *not* have a file
-        extension, or rather, any "." in the name are considered part of 
-        the stem and are *not* considered extensions.
-
-        [--outputLeafDir <outputLeafDirFormat>]
-        If specified, will apply the <outputLeafDirFormat> to the output
-        directories containing data. This is useful to blanket describe
-        final output directories with some descriptive text, such as 
-        'anon' or 'preview'. 
-
-        This is a formatting spec, so 
-
-            --outputLeafDir 'preview-%s'
-
-        where %s is the original leaf directory node, will prefix each
-        final directory containing output with the text 'preview-' which
-        can be useful in describing some features of the output set.
 
         [--threads <numThreads>]
         If specified, break the innermost analysis loop into <numThreads>
@@ -191,7 +170,7 @@ Command line arguments
         [--followLinks]
         If specified, follow symbolic links.
 
-        -v|--verbosity <level>
+        [-v|--verbosity <level>]
         Set the app verbosity level. 
 
             0: No internal output;
@@ -202,11 +181,11 @@ Command line arguments
                     - read
                     - analyze
                     - write
-                    
+            
 Examples
 --------
 
-    Process a tree containing DICOM files for ReV:
+Process a tree containing DICOM files for ReV:
 
 .. code:: bash
 
