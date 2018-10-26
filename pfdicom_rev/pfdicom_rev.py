@@ -90,7 +90,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         #
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
-        self.str_version                = "2.0.6"
+        self.str_version                = "2.2.0"
 
         self.b_anonDo                   = False
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
@@ -903,26 +903,21 @@ class pfdicom_rev(pfdicom.pfdicom):
         the DICOM tag substitution.
 
         """
-        b_status        = True
-        d_process       = {}
-        b_timerStart    = False
+        b_status            = True
+        d_process           = {}
 
-        func_process    = self.processDCM
-        str_analysis    = 'DICOM analysis'
+        func_process        = self.processDCM
+        self.str_analysis   = 'DICOM analysis'
 
         for k, v in kwargs.items():
-            if k == 'timerStart':   b_timerStart    = bool(v)
-            if k == 'func_process': func_process    = v
-            if k == 'description':  str_analysis    = v          
+            if k == 'func_process': func_process        = v
+            if k == 'description':  self.str_analysis   = v          
 
         self.dp.qprint(
                 "Starting pfdicom_rev %s... (please be patient while running)" % \
-                    str_analysis, 
+                    self.str_analysis, 
                 level = 1
                 )
-
-        if b_timerStart:
-            other.tic()
 
         # Run the base class, which probes the file tree
         # and does an initial analysis. Also suppress the
@@ -951,7 +946,10 @@ class pfdicom_rev(pfdicom.pfdicom):
         if self.b_json:
             self.ret_dump(d_ret, **kwargs)
 
-        self.dp.qprint('Returning from pfdicom_rev %s...' % str_analysis, level = 1)
+        self.dp.qprint(
+                'Returning from pfdicom_rev %s...' % 
+                self.str_analysis, level = 1
+        )
 
         return d_ret
         
