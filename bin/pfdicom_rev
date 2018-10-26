@@ -19,7 +19,7 @@ import  pfmisc
 from    pfmisc._colors      import Colors
 from    pfmisc              import other
 
-str_version = "2.0.6"
+str_version = "2.2.0"
 str_desc = Colors.CYAN + """
 
 
@@ -354,103 +354,66 @@ if args.b_version:
 
 # pudb.set_trace()
 
-if args.stage == 'all' or args.stage == '1':
-    # DICOM analysis
-    pf_dicom_revDCM = pfdicom_rev.pfdicom_rev(
-                            inputDir            = args.inputDir,
-                            inputFile           = args.inputFile,
-                            extension           = args.extension,
-                            outputDir           = args.outputDir,
-                            outputFileStem      = args.outputFileStem,
-                            outputLeafDir       = args.outputLeafDir,
-                            tagStruct           = args.tagStruct,
-                            server              = args.server,
-                            studyJSON           = args.studyJSON,
-                            threads             = args.threads,
-                            followLinks         = args.followLinks,
-                            verbosity           = args.verbosity,
-                            json                = args.json
-                        )
-    d_pfdicom_revDCM = pf_dicom_revDCM.run(
-                            timerStart          = True,
-                            func_process        = pf_dicom_revDCM.processDCM,
-                            description         = 'DICOM analysis'
-                        )
+if args.printElapsedTime:
+    other.tic()
 
-if args.stage == 'all' or args.stage == '2':
-    # Per-series JSON analysis
-    pf_dicom_revJSON = pfdicom_rev.pfdicom_rev(
-                            inputDir            = args.inputDir,
-                            inputFile           = args.inputFile,
-                            extension           = 'series.json',
-                            outputDir           = args.outputDir,
-                            outputFileStem      = args.outputFileStem,
-                            outputLeafDir       = args.outputLeafDir,
-                            tagStruct           = args.tagStruct,
-                            server              = args.server,
-                            studyJSON           = args.studyJSON,
-                            threads             = args.threads,
-                            followLinks         = args.followLinks,
-                            verbosity           = args.verbosity,
-                            json                = args.json
-                        )
-    d_pfdicom_revJSON = pf_dicom_revJSON.run(
-                            timerStart          = False,
-                            func_process        = pf_dicom_revJSON.processJSON,
-                            description         = 'JSON analysis'
-                        )
+# Per-stage target extensions
+lstr_stageExtenions = [ 
+    '.dcm', 
+    'series.json', 
+    'ex.json', 
+    args.studyJSON
+]
 
-if args.stage == 'all' or args.stage == '3':
-    # Per-month per example JSON analysis
-    pf_dicom_revJSONex = pfdicom_rev.pfdicom_rev(
-                            inputDir            = args.inputDir,
-                            inputFile           = args.inputFile,
-                            extension           = 'ex.json',
-                            outputDir           = args.outputDir,
-                            outputFileStem      = args.outputFileStem,
-                            outputLeafDir       = args.outputLeafDir,
-                            tagStruct           = args.tagStruct,
-                            server              = args.server,
-                            studyJSON           = args.studyJSON,
-                            threads             = args.threads,
-                            followLinks         = args.followLinks,
-                            verbosity           = args.verbosity,
-                            json                = args.json
-                        )
-    # pudb.set_trace()
-    d_pfdicom_revJSONex = pf_dicom_revJSONex.run(
-                            timerStart          = False,
-                            func_process        = pf_dicom_revJSONex.processJSONex,
-                            description         = 'JSONex analysis'
-                        )
+# Create the all the per stage objects
+l_pf_dicom          = []
+for str_ext in lstr_stageExtenions:
+    l_pf_dicom.append(
+        pfdicom_rev.pfdicom_rev(
+                        inputDir            = args.inputDir,
+                        inputFile           = args.inputFile,
+                        extension           = str_ext,
+                        outputDir           = args.outputDir,
+                        outputFileStem      = args.outputFileStem,
+                        outputLeafDir       = args.outputLeafDir,
+                        tagStruct           = args.tagStruct,
+                        server              = args.server,
+                        studyJSON           = args.studyJSON,
+                        threads             = args.threads,
+                        followLinks         = args.followLinks,
+                        verbosity           = args.verbosity,
+                        json                = args.json
+        )
+    )
 
-if args.stage == 'all' or args.stage == '4':
-    # Per-study JSON analysis
-    pf_dicom_revMAP = pfdicom_rev.pfdicom_rev(
-                            inputDir            = args.inputDir,
-                            inputFile           = args.inputFile,
-                            extension           = args.studyJSON,
-                            outputDir           = args.outputDir,
-                            outputFileStem      = args.outputFileStem,
-                            outputLeafDir       = args.outputLeafDir,
-                            tagStruct           = args.tagStruct,
-                            server              = args.server,
-                            studyJSON           = args.studyJSON,
-                            threads             = args.threads,
-                            followLinks         = args.followLinks,
-                            verbosity           = args.verbosity,
-                            json                = args.json
-                        )
-    d_pfdicom_revMAP = pf_dicom_revMAP.run(
-                            timerStart          = False,
-                            func_process        = pf_dicom_revMAP.processMAP,
-                            description         = 'MAP building'
-                        )
+# Per-stage named object processing handler
+lf_process          = [
+    l_pf_dicom[0].processDCM,
+    l_pf_dicom[1].processJSON,
+    l_pf_dicom[2].processJSONex,
+    l_pf_dicom[3].processMAP
+]
 
-if args.printElapsedTime: 
-    pf_dicom_revDCM.dp.qprint(
-                                "Elapsed time = %f seconds" % 
-                                d_pfdicom_revDCM['runTime']
-                            )
+# Per-stage description
+lstr_stageDesc      = [
+    'DICOM analysis',
+    'series JSON analysis',
+    'example index.html generation',
+    'data-space tree building'
+]
+
+stage               = 1
+for (pf_obj, str_desc, f_process) in zip(l_pf_dicom, lstr_stageDesc, lf_process):
+    if args.stage == 'all' or int(args.stage) == stage:
+        d_ret       = pf_obj.run(
+                            func_process        = f_process,
+                            description         = str_desc
+                        )
+        if args.printElapsedTime:
+            pf_obj.dp.qprint(
+                "Elapsed time from program start (now processed <%s>): %f seconds" %
+                (pf_obj.str_analysis, d_ret['runTime'])
+            )
+    stage += 1
 
 sys.exit(0)
