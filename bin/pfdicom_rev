@@ -285,7 +285,7 @@ parser.add_argument("-T", "--tagStruct",
 parser.add_argument("-S", "--server",
                     help    = "address of viewer server",
                     dest    = 'server',
-                    default = 'http://fnndsc.childrens.harvard.edu')
+                    default = '')
 parser.add_argument("--stage",
                     help    = "processing stage to execute",
                     dest    = 'stage',

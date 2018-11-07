@@ -97,7 +97,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         self.str_dcm2jpgDirResize       = 'dcm2jpgResize'
         self.str_previewFileName        = 'preview.jpg'
         self.str_studyFileName          = 'description.json'
-        self.str_serverName             = "http://fnndsc.childrens.harvard.edu"
+        self.str_serverName             = ''
 
         # Tags
         self.b_tagList                  = False
@@ -642,18 +642,34 @@ class pfdicom_rev(pfdicom.pfdicom):
             str_yr          = fieldFind(str_path, '-yr')
             str_mo          = fieldFind(str_path, '-mo')
             str_ex          = fieldFind(str_path, '-ex')
-            str_html = """
-                <html>
-                    <head>
-                        <title>FNNDSC</title>
-                        <meta http-equiv="refresh" content="0; URL=%s?year=%s&month=%s&example=%s">
-                        <meta name="keywords" content="automatic redirection">
-                    </head>
-                    <body style="background: black;" text="lightgreen">
-                    </body>
-                </html>
+            if self.str_serverName == '':
+                    str_html = """
+                    <html>
+                        <head>
+                            <title>FNNDSC</title>
+                            <script>
+                            var target = window.location.href.split('library-anon/')[0]+'?year=%s&month=%s&example=%s';
+                            window.location.replace(target);
+                            </script>
+                        </head>
+                        <body style="background: black;" text="lightgreen">
+                        </body>
+                    </html>
 
-            """ % (self.str_serverName, str_yr, str_mo, str_ex)
+                """ % (str_yr, str_mo, str_ex)
+            else:
+                str_html = """
+                    <html>
+                        <head>
+                            <title>FNNDSC</title>
+                            <meta http-equiv="refresh" content="0; URL=%s?year=%s&month=%s&example=%s">
+                            <meta name="keywords" content="automatic redirection">
+                        </head>
+                        <body style="background: black;" text="lightgreen">
+                        </body>
+                    </html>
+
+                """ % (self.str_serverName, str_yr, str_mo, str_ex)
             return str_html
         #pudb.set_trace()
         path                = at_data[0]
