@@ -97,7 +97,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         self.str_dcm2jpgDirResize       = 'dcm2jpgResize'
         self.str_previewFileName        = 'preview.jpg'
         self.str_studyFileName          = 'description.json'
-        self.str_serverName             = "http://fnndsc.childrens.harvard.edu"
+        self.str_serverName             = ''
 
         # Tags
         self.b_tagList                  = False
@@ -642,18 +642,34 @@ class pfdicom_rev(pfdicom.pfdicom):
             str_yr          = fieldFind(str_path, '-yr')
             str_mo          = fieldFind(str_path, '-mo')
             str_ex          = fieldFind(str_path, '-ex')
-            str_html = """
-                <html>
-                    <head>
-                        <title>FNNDSC</title>
-                        <meta http-equiv="refresh" content="0; URL=%s?year=%s&month=%s&example=%s">
-                        <meta name="keywords" content="automatic redirection">
-                    </head>
-                    <body style="background: black;" text="lightgreen">
-                    </body>
-                </html>
+            if self.str_serverName == '':
+                    str_html = """
+                    <html>
+                        <head>
+                            <title>FNNDSC</title>
+                            <script>
+                            var target = window.location.href.split('library-anon/')[0]+'?year=%s&month=%s&example=%s';
+                            window.location.replace(target);
+                            </script>
+                        </head>
+                        <body style="background: black;" text="lightgreen">
+                        </body>
+                    </html>
 
-            """ % (self.str_serverName, str_yr, str_mo, str_ex)
+                """ % (str_yr, str_mo, str_ex)
+            else:
+                str_html = """
+                    <html>
+                        <head>
+                            <title>FNNDSC</title>
+                            <meta http-equiv="refresh" content="0; URL=%s?year=%s&month=%s&example=%s">
+                            <meta name="keywords" content="automatic redirection">
+                        </head>
+                        <body style="background: black;" text="lightgreen">
+                        </body>
+                    </html>
+
+                """ % (self.str_serverName, str_yr, str_mo, str_ex)
             return str_html
         #pudb.set_trace()
         path                = at_data[0]
@@ -703,7 +719,7 @@ class pfdicom_rev(pfdicom.pfdicom):
 
         """
 
-        def table_generate(str_title, lstr_images):
+        def table_generate(str_title, lstr_images, str_pathProcess, int_nbTable):
             """
             Generate a table of thumbnails about a list of images
             """
@@ -711,28 +727,40 @@ class pfdicom_rev(pfdicom.pfdicom):
             lstr_i          = [i.split('mo/')[1] for i in lstr_images]
             str_tableStyle  = """
             <style type="text/css">
-            .tg {background-color: #000;}
+            .tg {background-color: #000; font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif;}
             .tg {border-collapse:collapse;border-spacing:0;}
-            .tg td{font-family:Arial, sans-serif;font-size:14px;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
-            .tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
-            .tg tr:hover{cursor: pointer; background-color: #fff;}
-            .tg .tg-0lax{text-align:left;vertical-align:middle;}
-            a {text-decoration: none; color: #999;}
+            .tg td{font-size:14px;padding:2px 2px 0px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
+            .tg th{font-size:14px;font-weight:normal;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
+            .tg tr.hv:hover{cursor: pointer; background-color: #fff; color: #000;}
+            .tg .tg-0lax{text-align:left;vertical-align:middle; border:1px solid #1d1f21; white-space: nowrap;}
+            .table .th .td {border: 1px solid #4a4b4d;}
+            .divhover {display:none;}
+            .tab:hover .divhover {display:block; background-color : #4a4b4d ; z-index: 20; text-align: left; font-size: 11px; color : white;border-color: white;}
+            a {text-decoration: none; color: #4a4b4d;}
             </style>
             """
             # Create the header row
+            int_nbRow = 60;
             str_th = ""
             str_th += """<th class="tg-0lax" style="text-align: center;"></th>\n"""
             for str_image in lstr_i:
                 str_header = str_image.split('ex/')[1].split('/dcm2jpg')[0]
-                str_header = str_header.split('-')[0][0:14]
+                str_header = str_header.split('-')[0][0:12]
                 str_th += """<th class="tg-0lax" style="text-align: center;">%s</th>\n""" % str_header
             # Now create the image row
             str_td = ""
             str_td += """<td class="tg-0lax" style="font-size: 18px; padding 0px 10px"><a href=%s>%s</a</td>\n""" % (str_title, str_title)
             for str_image in lstr_i:
+                fileDescription = str_pathProcess+'/'+str_image.split('/')[0]+'/'+str_image.split('/')[1]+"/tag-raw.txt"
+                #with open(jsonDescription) as f:
+                #    dataJson = json.load(f)
+                #    dataJson = json.dumps(dataJson, sort_keys=True, indent=4)     
+                file = open(fileDescription, 'r') 
+                dataJson = file.read() 
+
                 str_htmlImage   = '<img src="%s" width="128" height="128";">' % str_image
-                str_td          += """<td class="tg-0lax">%s</td>\n""" % str_htmlImage
+                str_td          += """<td class="tg-0lax tab">%s<div class="divhover" style="position:absolute; top : %spx; left : %spx;"><pre>%s</pre></div></td>\n""" % (str_htmlImage, str(int_nbTable), str(int_nbRow), dataJson)
+                int_nbRow+=133;
             # And combine into a table:
             str_table = """
             %s
@@ -740,7 +768,7 @@ class pfdicom_rev(pfdicom.pfdicom):
                <tr>
                %s
                </tr>
-               <tr>
+               <tr class="hv">
                %s
                </tr>
             </table>
@@ -748,7 +776,7 @@ class pfdicom_rev(pfdicom.pfdicom):
             """ % (str_tableStyle, str_th, str_td)
             return str_table
 
-        def str_indexHTML_create(str_heading, d_ex):
+        def str_indexHTML_create(str_heading, d_ex, str_pathProcess):
             """
             Return a string to be saved in 'index.html' 
             """
@@ -762,13 +790,16 @@ class pfdicom_rev(pfdicom.pfdicom):
 
 <body style = "background-color: #1d1f21; color: white">
     <h1 style="font-family: Arial, sans-serif;">%s</h1>
-    <p style="font-family: Arian, sans-serif;">Click on an image set below.</p>
+    <p style="font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif;">Click on an image set below.</p>
     <br>
             """ % (str_heading, str_heading)
             str_table = ""
+            int_nbTable = 289;
             for str_key, d_singleEx in sorted(d_ex.items()):
                 l_images = d_singleEx['imageLocation']
-                str_table += table_generate(str_key, l_images)
+                str_table += table_generate(str_key, l_images, str_pathProcess, int_nbTable)
+                int_nbTable+=174;
+
             str_html += """
             %s
 <script>
@@ -801,7 +832,8 @@ class pfdicom_rev(pfdicom.pfdicom):
 
         str_html = str_indexHTML_create(
                         str_relPath,
-                        d_JSONex['d_JSONread']['l_JSONread'][0]
+                        d_JSONex['d_JSONread']['l_JSONread'][0],
+                        path
         )
         with open('%s/index.html' % (path), 'w') as f:
             f.write(str_html)
