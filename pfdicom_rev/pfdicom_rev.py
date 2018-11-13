@@ -727,15 +727,16 @@ class pfdicom_rev(pfdicom.pfdicom):
             lstr_i          = [i.split('mo/')[1] for i in lstr_images]
             str_tableStyle  = """
             <style type="text/css">
-            .tg {background-color: #000;}
+            .tg {background-color: #000; font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif;}
             .tg {border-collapse:collapse;border-spacing:0;}
-            .tg td{font-family:Arial, sans-serif;font-size:14px;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
-            .tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
+            .tg td{font-size:14px;padding:2px 2px 0px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
+            .tg th{font-size:14px;font-weight:normal;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
             .tg tr.hv:hover{cursor: pointer; background-color: #fff; color: #000;}
-            .tg .tg-0lax{text-align:left;vertical-align:middle;}
+            .tg .tg-0lax{text-align:left;vertical-align:middle; border:1px solid #1d1f21; white-space: nowrap;}
+            .table .th .td {border: 1px solid #4a4b4d;}
             .divhover {display:none;}
-            .tab:hover .divhover {display:block; background-color : #4a4b4d ; z-index: 20; text-align: left; font-size: 13px; color : white;border-color: white;}
-            a {text-decoration: none; color: #999;}
+            .tab:hover .divhover {display:block; background-color : #4a4b4d ; z-index: 20; text-align: left; font-size: 11px; color : white;border-color: white;}
+            a {text-decoration: none; color: #4a4b4d;}
             </style>
             """
             # Create the header row
@@ -750,17 +751,16 @@ class pfdicom_rev(pfdicom.pfdicom):
             str_td = ""
             str_td += """<td class="tg-0lax" style="font-size: 18px; padding 0px 10px"><a href=%s>%s</a</td>\n""" % (str_title, str_title)
             for str_image in lstr_i:
-                jsonDescription = str_pathProcess+'/'+str_image.split('/')[0]+'/'+str_image.split('/')[1]+"/tag-raw.txt"
+                fileDescription = str_pathProcess+'/'+str_image.split('/')[0]+'/'+str_image.split('/')[1]+"/tag-raw.txt"
                 #with open(jsonDescription) as f:
-                    #pudb.set_trace()
                 #    dataJson = json.load(f)
                 #    dataJson = json.dumps(dataJson, sort_keys=True, indent=4)     
-                file = open(jsonDescription, 'r') 
+                file = open(fileDescription, 'r') 
                 dataJson = file.read() 
 
                 str_htmlImage   = '<img src="%s" width="128" height="128";">' % str_image
                 str_td          += """<td class="tg-0lax tab">%s<div class="divhover" style="position:absolute; top : %spx; left : %spx;"><pre>%s</pre></div></td>\n""" % (str_htmlImage, str(int_nbTable), str(int_nbRow), dataJson)
-                int_nbRow+=132;
+                int_nbRow+=133;
             # And combine into a table:
             str_table = """
             %s
@@ -790,15 +790,15 @@ class pfdicom_rev(pfdicom.pfdicom):
 
 <body style = "background-color: #1d1f21; color: white">
     <h1 style="font-family: Arial, sans-serif;">%s</h1>
-    <p style="font-family: Arian, sans-serif;">Click on an image set below.</p>
+    <p style="font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif;">Click on an image set below.</p>
     <br>
             """ % (str_heading, str_heading)
             str_table = ""
-            int_nbTable = 300;
+            int_nbTable = 289;
             for str_key, d_singleEx in sorted(d_ex.items()):
                 l_images = d_singleEx['imageLocation']
                 str_table += table_generate(str_key, l_images, str_pathProcess, int_nbTable)
-                int_nbTable+=172;
+                int_nbTable+=174;
 
             str_html += """
             %s
