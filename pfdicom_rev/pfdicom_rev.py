@@ -719,7 +719,7 @@ class pfdicom_rev(pfdicom.pfdicom):
 
         """
 
-        def table_generate(str_title, lstr_images):
+        def table_generate(str_title, lstr_images, str_pathProcess, int_nbTable):
             """
             Generate a table of thumbnails about a list of images
             """
@@ -731,24 +731,36 @@ class pfdicom_rev(pfdicom.pfdicom):
             .tg {border-collapse:collapse;border-spacing:0;}
             .tg td{font-family:Arial, sans-serif;font-size:14px;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
             .tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
-            .tg tr:hover{cursor: pointer; background-color: #fff;}
+            .tg tr.hv:hover{cursor: pointer; background-color: #fff; color: #000;}
             .tg .tg-0lax{text-align:left;vertical-align:middle;}
+            .divhover {display:none;}
+            .tab:hover .divhover {display:block; background-color : #4a4b4d ; z-index: 20; text-align: left; font-size: 13px; color : white;border-color: white;}
             a {text-decoration: none; color: #999;}
             </style>
             """
             # Create the header row
+            int_nbRow = 60;
             str_th = ""
             str_th += """<th class="tg-0lax" style="text-align: center;"></th>\n"""
             for str_image in lstr_i:
                 str_header = str_image.split('ex/')[1].split('/dcm2jpg')[0]
-                str_header = str_header.split('-')[0][0:14]
+                str_header = str_header.split('-')[0][0:12]
                 str_th += """<th class="tg-0lax" style="text-align: center;">%s</th>\n""" % str_header
             # Now create the image row
             str_td = ""
             str_td += """<td class="tg-0lax" style="font-size: 18px; padding 0px 10px"><a href=%s>%s</a</td>\n""" % (str_title, str_title)
             for str_image in lstr_i:
+                jsonDescription = str_pathProcess+'/'+str_image.split('/')[0]+'/'+str_image.split('/')[1]+"/tag-raw.txt"
+                #with open(jsonDescription) as f:
+                    #pudb.set_trace()
+                #    dataJson = json.load(f)
+                #    dataJson = json.dumps(dataJson, sort_keys=True, indent=4)     
+                file = open(jsonDescription, 'r') 
+                dataJson = file.read() 
+
                 str_htmlImage   = '<img src="%s" width="128" height="128";">' % str_image
-                str_td          += """<td class="tg-0lax">%s</td>\n""" % str_htmlImage
+                str_td          += """<td class="tg-0lax tab">%s<div class="divhover" style="position:absolute; top : %spx; left : %spx;"><pre>%s</pre></div></td>\n""" % (str_htmlImage, str(int_nbTable), str(int_nbRow), dataJson)
+                int_nbRow+=132;
             # And combine into a table:
             str_table = """
             %s
@@ -756,7 +768,7 @@ class pfdicom_rev(pfdicom.pfdicom):
                <tr>
                %s
                </tr>
-               <tr>
+               <tr class="hv">
                %s
                </tr>
             </table>
@@ -764,7 +776,7 @@ class pfdicom_rev(pfdicom.pfdicom):
             """ % (str_tableStyle, str_th, str_td)
             return str_table
 
-        def str_indexHTML_create(str_heading, d_ex):
+        def str_indexHTML_create(str_heading, d_ex, str_pathProcess):
             """
             Return a string to be saved in 'index.html' 
             """
@@ -782,9 +794,12 @@ class pfdicom_rev(pfdicom.pfdicom):
     <br>
             """ % (str_heading, str_heading)
             str_table = ""
+            int_nbTable = 300;
             for str_key, d_singleEx in sorted(d_ex.items()):
                 l_images = d_singleEx['imageLocation']
-                str_table += table_generate(str_key, l_images)
+                str_table += table_generate(str_key, l_images, str_pathProcess, int_nbTable)
+                int_nbTable+=172;
+
             str_html += """
             %s
 <script>
@@ -817,7 +832,8 @@ class pfdicom_rev(pfdicom.pfdicom):
 
         str_html = str_indexHTML_create(
                         str_relPath,
-                        d_JSONex['d_JSONread']['l_JSONread'][0]
+                        d_JSONex['d_JSONread']['l_JSONread'][0],
+                        path
         )
         with open('%s/index.html' % (path), 'w') as f:
             f.write(str_html)
