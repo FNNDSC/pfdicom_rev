@@ -725,20 +725,7 @@ class pfdicom_rev(pfdicom.pfdicom):
             """
             lstr_images     = [i for i in lstr_images if 'mo/' in i]
             lstr_i          = [i.split('mo/')[1] for i in lstr_images]
-            str_tableStyle  = """
-            <style type="text/css">
-            .tg {background-color: #000; font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif;}
-            .tg {border-collapse:collapse;border-spacing:0;}
-            .tg td{font-size:14px;padding:2px 2px 0px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
-            .tg th{font-size:14px;font-weight:normal;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
-            .tg tr.hv:hover{cursor: pointer; background-color: #fff; color: #000;}
-            .tg .tg-0lax{text-align:left;vertical-align:middle; border:1px solid #1d1f21; white-space: nowrap;}
-            .table .th .td {border: 1px solid #4a4b4d;}
-            .divhover {display:none;}
-            .tab:hover .divhover {display:block; background-color : #4a4b4d ; z-index: 20; text-align: left; font-size: 11px; color : white;border-color: white;}
-            a {text-decoration: none; color: #4a4b4d;}
-            </style>
-            """
+
             # Create the header row
             int_nbRow = 60;
             str_th = ""
@@ -764,12 +751,12 @@ class pfdicom_rev(pfdicom.pfdicom):
                             dataJson = json.load(f)
                             dataJson = json.dumps(dataJson, sort_keys=True, indent=4)
 
-                str_htmlImage   = '<img src="%s" width="128" height="128";">' % str_image
-                str_td          += """<td class="tg-0lax tab">%s<div class="divhover" style="position:absolute; top : %spx; left : %spx;"><pre>%s</pre></div></td>\n""" % (str_htmlImage, str(int_nbTable), str(int_nbRow), dataJson)
+                str_image = str_image.split('/')[0]+'/'+str_image.split('/')[1]+'/preview.jpg'
+                str_htmlImage   = '<img src="%s" onmousemove=\'onMove()\' onmouseout=\'centerThumbnail()\' onload=\'positionThumbnail(0.5, this);\';">' % str_image
+                str_td          += """<td class="tg-0lax tab"><div class="previewContainer">%s</div><div class="divhover" style="position:absolute; top : %spx; left : %spx;"><pre>%s</pre></div></td>\n""" % (str_htmlImage, str(int_nbTable), str(int_nbRow), dataJson)
                 int_nbRow+=133;
             # And combine into a table:
             str_table = """
-            %s
             <table class="tg">
                <tr>
                %s
@@ -779,7 +766,7 @@ class pfdicom_rev(pfdicom.pfdicom):
                </tr>
             </table>
             <br>
-            """ % (str_tableStyle, str_th, str_td)
+            """ % (str_th, str_td)
             return str_table
 
         def str_indexHTML_create(str_heading, d_ex, str_pathProcess):
@@ -792,7 +779,83 @@ class pfdicom_rev(pfdicom.pfdicom):
 <head>
         <title>%s</title>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<script>
+
+      var lastelem;
+      function centerThumbnail(e){
+        console.log("ON CENTER")
+        var POSmouse = handler()
+        var elem = document.elementFromPoint(POSmouse.X, POSmouse.Y);
+        positionThumbnail(0.5, lastelem);
+      }
+
+      function positionThumbnail(normalizedPosition, target) {
+        console.log("ON POSITION")
+        const THUMBNAIL_HEIGHT = 128;
+        const TOTAL_HEIGHT = target.offsetHeight;
+        console.log(TOTAL_HEIGHT)
+        console.log(target)
+        const nbFrames = TOTAL_HEIGHT / THUMBNAIL_HEIGHT;
+        const offset = Math.floor(normalizedPosition * nbFrames) * THUMBNAIL_HEIGHT;
+        target.style.transform =
+          `translateY(-${offset}px)`;
+      }
+
+      function onMove(e) {
+        console.log("ON MOVE")
+        var POSmouse = handler()
+        var elem = document.elementFromPoint(POSmouse.X, POSmouse.Y);
+        var POSimg = findPos(elem)
+        const normalizedPosition = (POSmouse.X - POSimg.X) / elem.clientWidth;
+        lastelem = elem;
+        positionThumbnail(normalizedPosition, elem);
+      }
+
+      function handler(e) {
+        e = e || window.event;
+
+        var X = e.pageX;
+        var Y = e.pageY;
+
+        // IE 8
+        if (X === undefined) {
+            X = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+            Y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+        }
+        return {X , Y}
+      } 
+
+      function findPos(obj){
+        var curleft = 0;
+        var curtop = 0;
+
+        if (obj.offsetParent) {
+          do {
+              curleft += obj.offsetLeft;
+              curtop += obj.offsetTop;
+             } while (obj = obj.offsetParent);
+
+        return {X:curleft,Y:curtop};
+        }
+      }
+
+</script>
 </head>
+<style type="text/css">
+            .tg {background-color: #000; font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif;}
+            .tg {border-collapse:collapse;border-spacing:0;}
+            .tg td{font-size:14px;padding:2px 2px 0px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
+            .tg th{font-size:14px;font-weight:normal;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
+            .tg tr.hv:hover{cursor: pointer; background-color: #fff; color: #000;}
+            .tg .tg-0lax{text-align:left;vertical-align:middle; border:1px solid #1d1f21; white-space: nowrap; max-width: 128px; max-height: 128px;}
+            .table .th .td {border: 1px solid #4a4b4d;}
+            .divhover {display:none;}
+            .tab:hover .divhover {display:block; background-color : #4a4b4d ; z-index: 20; text-align: left; font-size: 11px; color : white;border-color: white;}
+            a {text-decoration: none; color: #4a4b4d;}
+            img {min-width: 128px; min-height: 128px; background-color: #000;}
+            .previewContainer {height: 128px; width: 128px; margin: auto; overflow: hidden;}
+</style>
 
 <body style = "background-color: #1d1f21; color: white">
     <h1 style="font-family: Arial, sans-serif;">%s</h1>
