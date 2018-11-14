@@ -751,12 +751,18 @@ class pfdicom_rev(pfdicom.pfdicom):
             str_td = ""
             str_td += """<td class="tg-0lax" style="font-size: 18px; padding 0px 10px"><a href=%s>%s</a</td>\n""" % (str_title, str_title)
             for str_image in lstr_i:
+                dataJson = ''
+                #pudb.set_trace()
                 fileDescription = str_pathProcess+'/'+str_image.split('/')[0]+'/'+str_image.split('/')[1]+"/tag-raw.txt"
-                #with open(jsonDescription) as f:
-                #    dataJson = json.load(f)
-                #    dataJson = json.dumps(dataJson, sort_keys=True, indent=4)     
-                file = open(fileDescription, 'r') 
-                dataJson = file.read() 
+                if os.path.isfile(fileDescription):    
+                    file = open(fileDescription, 'r') 
+                    dataJson = file.read() 
+                else:
+                    fileDescription = str_pathProcess+'/'+str_image.split('/')[0]+'/'+str_image.split('/')[1]+"/tag.json"
+                    if os.path.isfile(fileDescription):
+                        with open(fileDescription) as f:
+                            dataJson = json.load(f)
+                            dataJson = json.dumps(dataJson, sort_keys=True, indent=4)
 
                 str_htmlImage   = '<img src="%s" width="128" height="128";">' % str_image
                 str_td          += """<td class="tg-0lax tab">%s<div class="divhover" style="position:absolute; top : %spx; left : %spx;"><pre>%s</pre></div></td>\n""" % (str_htmlImage, str(int_nbTable), str(int_nbRow), dataJson)
