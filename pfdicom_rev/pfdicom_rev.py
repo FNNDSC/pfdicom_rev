@@ -723,9 +723,48 @@ class pfdicom_rev(pfdicom.pfdicom):
             """
             Generate a table of thumbnails about a list of images
             """
+            int_nbColumn = 5
             lstr_images     = [i for i in lstr_images if 'mo/' in i]
             lstr_i          = [i.split('mo/')[1] for i in lstr_images]
+            str_dir = str_pathProcess+'/'+str_title+'/'
+            int_nbSeries = len(list(filter(os.path.isdir, [os.path.join(str_dir, fold) for fold in os.listdir(str_dir)])))
+            int_nbRow = int_nbSeries // int_nbColumn
+            int_rest = int_nbSeries % int_nbColumn
+            if int_rest != 0:
+                int_nbRow += 1
+            int_count = 0
+            str_table = ""
+            for x in range(0, int_nbRow):
+                rangeMin = 0 + int_nbColumn*x
+                str_table += """<tr>\n"""
+                if x == 0:
+                    str_table += """<th class="tg-0lax" rowspan="%s" style="font-size: 18px; padding 0px 10px"><a href=%s>%s</a</th>\n""" % (int_nbRow*2,str_title, str_title)
+               #str_table += "x : %s rangeMin : %s count : %s" % (x , rangeMin, int_count)
+                for str_image in lstr_i:
+                   #str_table += "count : %s" % (int_count)
+                    if int_count in range(rangeMin, rangeMin+int_nbColumn):
+                        str_header = str_image.split('ex/')[1].split('/dcm2jpg')[0]
+                        str_header = str_header.split('-')[0][0:12]
+                        str_table += """<th class="tg-0lax" style="text-align: center;">%s</th>\n""" % str_header
+                    int_count += 1
+                int_count = 0
+                str_table +="""
+                </tr>
+                <tr>
+                """
+                for str_image in lstr_i:
+                    if int_count in range(rangeMin, rangeMin+int_nbColumn):
+                        str_image = str_image.split('/')[0]+'/'+str_image.split('/')[1]+'/preview.jpg'
+                        str_htmlImage = '<img src="%s" onmousemove=\'onMove()\' onmouseout=\'centerThumbnail()\' onload=\'positionThumbnail(0.5, this);\';">' % str_image
+                        str_table += """<td class="tg-0lax tab"><div class="previewContainer">%s</div></td>\n""" % str_htmlImage
+                    int_count += 1
+                int_count = 0
+                str_table +="""</tr>\n"""
 
+
+
+
+            '''
             # Create the header row
             int_nbRow = 60;
             str_th = ""
@@ -755,18 +794,14 @@ class pfdicom_rev(pfdicom.pfdicom):
                 str_htmlImage   = '<img src="%s" onmousemove=\'onMove()\' onmouseout=\'centerThumbnail()\' onload=\'positionThumbnail(0.5, this);\';">' % str_image
                 str_td          += """<td class="tg-0lax tab"><div class="previewContainer">%s</div><div class="divhover" style="position:absolute; top : %spx; left : %spx;"><pre>%s</pre></div></td>\n""" % (str_htmlImage, str(int_nbTable), str(int_nbRow), dataJson)
                 int_nbRow+=133;
+            '''
             # And combine into a table:
             str_table = """
             <table class="tg">
-               <tr>
                %s
-               </tr>
-               <tr class="hv">
-               %s
-               </tr>
             </table>
             <br>
-            """ % (str_th, str_td)
+            """ % str_table
             return str_table
 
         def str_indexHTML_create(str_heading, d_ex, str_pathProcess):
@@ -784,29 +819,26 @@ class pfdicom_rev(pfdicom.pfdicom):
 
       var lastelem;
       function centerThumbnail(e){
-        console.log("ON CENTER")
         var POSmouse = handler()
         var elem = document.elementFromPoint(POSmouse.X, POSmouse.Y);
         positionThumbnail(0.5, lastelem);
       }
 
       function positionThumbnail(normalizedPosition, target) {
-        console.log("ON POSITION")
         const THUMBNAIL_HEIGHT = 128;
         const TOTAL_HEIGHT = target.offsetHeight;
-        console.log(TOTAL_HEIGHT)
-        console.log(target)
         const nbFrames = TOTAL_HEIGHT / THUMBNAIL_HEIGHT;
         const offset = Math.floor(normalizedPosition * nbFrames) * THUMBNAIL_HEIGHT;
-        target.style.transform =
-          `translateY(-${offset}px)`;
+        if (target.nodeName == "IMG"){
+            target.style.transform =
+              `translateY(-${offset}px)`;
+        }
       }
 
       function onMove(e) {
-        console.log("ON MOVE")
         var POSmouse = handler()
-        var elem = document.elementFromPoint(POSmouse.X, POSmouse.Y);
-        var POSimg = findPos(elem)
+        var elem = document.elementFromPoint(POSmouse.X - window.pageXOffset, POSmouse.Y - window.pageYOffset);
+        var POSimg = getOffset(elem)
         const normalizedPosition = (POSmouse.X - POSimg.X) / elem.clientWidth;
         lastelem = elem;
         positionThumbnail(normalizedPosition, elem);
@@ -825,6 +857,14 @@ class pfdicom_rev(pfdicom.pfdicom):
         }
         return {X , Y}
       } 
+
+        function getOffset(el) {
+            const rect = el.getBoundingClientRect();
+            return {
+            X: rect.left + window.scrollX,
+            Y: rect.top + window.scrollY
+            };
+        }
 
       function findPos(obj){
         var curleft = 0;
@@ -845,9 +885,9 @@ class pfdicom_rev(pfdicom.pfdicom):
 <style type="text/css">
             .tg {background-color: #000; font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif;}
             .tg {border-collapse:collapse;border-spacing:0;}
-            .tg td{font-size:14px;padding:2px 2px 0px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
+            .tg td{font-size:14px;padding:2px 2px 2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
             .tg th{font-size:14px;font-weight:normal;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
-            .tg tr.hv:hover{cursor: pointer; background-color: #fff; color: #000;}
+            .tg td:hover{cursor: pointer; background-color: #fff; color: #000;}
             .tg .tg-0lax{text-align:left;vertical-align:middle; border:1px solid #1d1f21; white-space: nowrap; max-width: 128px; max-height: 128px;}
             .table .th .td {border: 1px solid #4a4b4d;}
             .divhover {display:none;}
