@@ -90,7 +90,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         #
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
-        self.str_version                = "2.2.4"
+        self.str_version                = "2.2.6"
 
         self.b_anonDo                   = False
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
