@@ -755,7 +755,7 @@ class pfdicom_rev(pfdicom.pfdicom):
                 for str_image in lstr_i:
                     if int_count in range(rangeMin, rangeMin+int_nbColumn):
                         str_image = str_image.split('/')[0]+'/'+str_image.split('/')[1]+'/preview.jpg'
-                        str_htmlImage = '<img src="%s" ondblclick=\"redirection()\" onclick=\"displayHover(this)\" onmousemove=\"onMove();\" onmouseout=\"positionThumbnail(0.5, this);\" onload=\"positionThumbnail(0.5, this);\">' % str_image
+                        str_htmlImage = '<img src="%s" ondblclick=\"displayHover(this)\" onmousemove=\"onMove();\" onmouseout=\"positionThumbnail(0.5, this);\" onload=\"positionThumbnail(0.5, this);\">' % str_image
                         str_table += """<td class="tg-0lax tab"><div class="previewContainer"><a href=%s></a>%s</div></td>\n""" % (str_title, str_htmlImage)
                     int_count += 1
                 int_count = 0
@@ -873,33 +873,6 @@ class pfdicom_rev(pfdicom.pfdicom):
         }
       }
 
-      function displayHover(e){
-      if (document.getElementsByClassName('focus')[0]!= undefined)
-        document.getElementsByClassName('focus')[0].className = 'tg-0lax tab';
-       if (document.getElementsByClassName('divhoverDisplay')[0]!= undefined){
-        document.getElementsByClassName('divhoverDisplay')[0].style.background = "#4a4b4d";
-        e.parentNode.parentNode.className = "tg-0lax tab focus"
-        e.parentNode.parentNode.style.backgroundColor="#2196f3!important";
-        var seriesName = e.src.split('ex/')[1];
-        seriesName = seriesName.split('/preview.jpg')[0];
-        var imageSRC = e.src.split('preview')[0]+'dcm2jpgRaw/'+'middle-'+seriesName+'.jpg';
-        var tagrawSRC = e.src.split('preview')[0]+'tag-raw.txt'
-        console.log(tagrawSRC);
-        var tagraw;
-        var client = new XMLHttpRequest();
-        client.open('GET',tagrawSRC);
-        client.onreadystatechange = function() {
-          tagraw = client.responseText;
-          var content = '<br><div style = "text-align: center; font-size: 20px">'+seriesName+'</div><br>'
-          content = content + '<img style="width: 300px; height:300px; display: block; margin-left: auto; margin-right: auto;"src="'+imageSRC+'">';
-          content = content + '<pre>'+tagraw+'</pre>'
-          document.getElementsByClassName('divhoverDisplay')[0].innerHTML = content;
-          elemDisplay = e
-        }
-        client.send();
-      }
-    }
-
     function displayHover(e){
       if (document.getElementsByClassName('focus')[0]!= undefined)
         document.getElementsByClassName('focus')[0].className = 'tg-0lax tab';
@@ -961,7 +934,7 @@ class pfdicom_rev(pfdicom.pfdicom):
             str_html += """
             %s
 <script>
-    $(".tg tr").dblclick(function(){
+    $(".tg tr").click(function(){
         var href = $(this).find("a").attr("href");
         if(href) {
             window.location = href;
