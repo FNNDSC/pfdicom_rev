@@ -90,7 +90,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         #
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
-        self.str_version                = "2.2.4"
+        self.str_version                = "2.2.0"
 
         self.b_anonDo                   = False
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
@@ -745,7 +745,7 @@ class pfdicom_rev(pfdicom.pfdicom):
                     if int_count in range(rangeMin, rangeMin+int_nbColumn):
                         str_header = str_image.split('ex/')[1].split('/dcm2jpg')[0]
                         str_header = str_header.split('-')[0][0:12]
-                        str_table += """<th class="tg-0lax" style="text-align: center;">%s</th></th>\n""" % str_header
+                        str_table += """<th class="tg-0lax" style="text-align: center;">%s</th>\n""" % str_header
                     int_count += 1
                 int_count = 0
                 str_table +="""
@@ -755,8 +755,8 @@ class pfdicom_rev(pfdicom.pfdicom):
                 for str_image in lstr_i:
                     if int_count in range(rangeMin, rangeMin+int_nbColumn):
                         str_image = str_image.split('/')[0]+'/'+str_image.split('/')[1]+'/preview.jpg'
-                        str_htmlImage = '<img src="%s" ondblclick=\"displayHover(this)\" onmousemove=\"onMove();\" onmouseout=\"positionThumbnail(0.5, this);\" onload=\"positionThumbnail(0.5, this);\">' % str_image
-                        str_table += """<td class="tg-0lax tab"><div class="previewContainer"><a href=%s></a>%s</div></td>\n""" % (str_title, str_htmlImage)
+                        str_htmlImage = '<img src="%s" onmouseenter=\'displayHover(this)\' onmousemove=\'onMove(); displayHover(this)\' onmouseout=\' enddisplayHover(this)\' onload=\'positionThumbnail(0.5, this);\';">' % str_image
+                        str_table += """<td class="tg-0lax tab"><div class="previewContainer">%s</div></td>\n""" % str_htmlImage
                     int_count += 1
                 int_count = 0
                 str_table +="""</tr>\n"""
@@ -868,17 +868,16 @@ class pfdicom_rev(pfdicom.pfdicom):
 
         }
         else if (width > 1350 && document.getElementsByClassName('divhoverHide')[0]!= undefined){
-          document.getElementsByClassName('divhoverHide')[0].className = 'divhoverDisplay';
+            document.getElementsByClassName('divhoverHide')[0].className = 'divhoverDisplay';
 
         }
       }
 
-    function displayHover(e){
-      if (document.getElementsByClassName('focus')[0]!= undefined)
-        document.getElementsByClassName('focus')[0].className = 'tg-0lax tab';
-       if (document.getElementsByClassName('divhoverDisplay')[0]!= undefined){
-        document.getElementsByClassName('divhoverDisplay')[0].style.background = "#333537";
-        e.parentNode.parentNode.className = "tg-0lax tab focus"
+      function displayHover(e){
+        if(document.getElementsByClassName('divhoverDisplay')[0]!= undefined){
+          document.getElementsByClassName('divhoverDisplay')[0].style.background = "#4a4b4d";
+        }
+       if (display == 0 && document.getElementsByClassName('divhoverDisplay')[0]!= undefined){
         var seriesName = e.src.split('ex/')[1];
         seriesName = seriesName.split('/preview.jpg')[0];
         var imageSRC = e.src.split('preview')[0]+'dcm2jpgRaw/'+'middle-'+seriesName+'.jpg';
@@ -890,16 +889,26 @@ class pfdicom_rev(pfdicom.pfdicom):
         client.onreadystatechange = function() {
           tagraw = client.responseText;
           var content = '<br><div style = "text-align: center; font-size: 20px">'+seriesName+'</div><br>'
-          content = content + '<img style="width: 350px; height:350px; display: block; margin-left: auto; margin-right: auto;"src="'+imageSRC+'">';
+          content = content + '<img style="width: 300px; height:300px; display: block; margin-left: auto; margin-right: auto;"src="'+imageSRC+'">';
           content = content + '<pre>'+tagraw+'</pre>'
           document.getElementsByClassName('divhoverDisplay')[0].innerHTML = content;
+          display = 1 
           elemDisplay = e
         }
         client.send();
+        
+
       }
     }
 
+    function enddisplayHover(e){
+      positionThumbnail(0.5, e);
+      setTimeout(function (){
+        if (elemDisplay == e)
+          display = 0
+      }, 250);
 
+    }
 
 
   </script>
@@ -917,12 +926,11 @@ class pfdicom_rev(pfdicom.pfdicom):
     a {text-decoration: none; color: #4a4b4d;}
     img {min-width: 128px; min-height: 128px; background-color: #000;}
     .previewContainer {height: 128px; width: 128px; margin: auto; overflow: hidden;}
-    .focus {background-color:#2196f3!important;}
 </style>
 
 <body style = "background-color: #1d1f21; color: white" onresize="resize()" onload="resize()">
     <h1 style="font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif;">%s</h1>
-    <p style="font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif;">Click on an image below to display DICOM tags.<br> Double click to open the viewer.</p>
+    <p style="font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif;">Click on an image set below.</p>
     <div class="divhoverDisplay" style="position:fixed; top: 3%%; left : 750px;height: 94%%;"></div>
     <br>
             """ % (str_heading, str_heading)
