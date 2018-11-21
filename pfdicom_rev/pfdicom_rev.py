@@ -863,6 +863,9 @@ class pfdicom_rev(pfdicom.pfdicom):
         if(document.getElementsByClassName('divhoverDisplay')[0]!= undefined){
           document.getElementsByClassName('divhoverDisplay')[0].style.width = displaywidth+"px";
         }
+        if(document.getElementsByClassName('divhoverHide')[0]!= undefined){
+          document.getElementsByClassName('divhoverHide')[0].style.width = displaywidth+"px";
+        }
         if(width < 1350 && document.getElementsByClassName('divhoverDisplay')[0]!= undefined){
           document.getElementsByClassName('divhoverDisplay')[0].className = 'divhoverHide';
 
@@ -883,7 +886,6 @@ class pfdicom_rev(pfdicom.pfdicom):
         seriesName = seriesName.split('/preview.jpg')[0];
         var imageSRC = e.src.split('preview')[0]+'dcm2jpgRaw/'+'middle-'+seriesName+'.jpg';
         var tagrawSRC = e.src.split('preview')[0]+'tag-raw.txt'
-        console.log(tagrawSRC);
         var tagraw;
         var client = new XMLHttpRequest();
         client.open('GET',tagrawSRC);
@@ -921,7 +923,7 @@ class pfdicom_rev(pfdicom.pfdicom):
 </style>
 
 <body style = "background-color: #1d1f21; color: white" onresize="resize()" onload="resize()">
-    <h1 style="font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif;">%s</h1>
+    <h1 style="font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif; position: relative; left:295px;">%s</h1>
     <p style="font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif;">Click on an image below to display DICOM tags.<br> Double click to open the viewer.</p>
     <div class="divhoverDisplay" style="position:fixed; top: 3%%; left : 750px;height: 94%%;"></div>
     <br>
@@ -934,12 +936,27 @@ class pfdicom_rev(pfdicom.pfdicom):
             str_html += """
             %s
 <script>
-    $(".tg tr").click(function(){
-        var href = $(this).find("a").attr("href");
+var timer = 0;
+var delay = 500;
+var prevent = false;
+
+$(".tg tr")
+  .on("dblclick", function() {
+    prevent = true;
+    clearTimeout(timer);
+  })
+  .on("click", function() {
+    var tableRaw = this
+    timer = setTimeout(function() {
+      if (!prevent) {
+        var href = $(tableRaw).find("a").attr("href");
         if(href) {
-            window.location = href;
+           window.location = href;
         }
-    });
+      }
+      prevent = false;
+    }, delay);
+  });
 </script>
 </body>
 </html>
