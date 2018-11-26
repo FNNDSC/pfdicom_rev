@@ -90,7 +90,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         #
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
-        self.str_version                = "2.2.6"
+        self.str_version                = "2.2.8"
 
         self.b_anonDo                   = False
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
@@ -907,6 +907,7 @@ class pfdicom_rev(pfdicom.pfdicom):
   </script>
 </head>
 <style type="text/css">
+    p {font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif;}
     .tg {background-color: #000; font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif;}
     .tg {border-collapse:collapse;border-spacing:0;}
     .tg td{font-size:14px;padding:2px 2px 2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
@@ -924,7 +925,15 @@ class pfdicom_rev(pfdicom.pfdicom):
 
 <body style = "background-color: #1d1f21; color: white" onresize="resize()" onload="resize()">
     <h1 style="font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif; position: relative; left:295px;">%s</h1>
-    <p style="font-family: Ubuntu,Roboto,Helvetica,Arial,sans-serif;">Click on an image below to display DICOM tags.<br> Double click to open the viewer.</p>
+    <p>
+    <b>Single</b> click on an image below to launch the embedded viewer.
+    </p>
+    <p> 
+    <b>Double</b> click on an image below to browse DICOM tags.
+    </p> 
+    <p>
+    Note that if the browser window is too small, the DICOM tag viewer will not display.
+    </p>
     <div class="divhoverDisplay" style="position:fixed; top: 3%%; left : 750px;height: 94%%;"></div>
     <br>
             """ % (str_heading, str_heading)
