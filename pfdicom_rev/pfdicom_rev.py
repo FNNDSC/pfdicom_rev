@@ -525,6 +525,13 @@ class pfdicom_rev(pfdicom.pfdicom):
                                     '%s/%s'     % (path, self.str_previewFileName)
             ret                 = self.sys_run(str_execCmd)
 
+            str_execCmd         = self.exec_jpgPreview                          + \
+                                    ' -append '                                 + \
+                                    '%s/%s/* ' % (path, self.str_dcm2jpgDirRaw)    + \
+                                    '%s/raw-%s'     % (path, self.str_previewFileName)
+            ret                 = self.sys_run(str_execCmd)
+
+
         def jsonSeriesDescription_generate():
             # pudb.set_trace()
             DCM                         = d_outputInfo['l_dcm'][0]
@@ -736,26 +743,35 @@ class pfdicom_rev(pfdicom.pfdicom):
             str_table = ""
             for x in range(0, int_nbRow):
                 rangeMin = 0 + int_nbColumn*x
+                if x == int_nbRow-1 and int_rest != 0:
+                    rangeMax = rangeMin + int_rest
+                else:
+                    rangeMax = rangeMin + int_nbColumn
+
                 str_table += """<tr>\n"""
                 if x == 0:
                     str_table += """<th class="tg-0lax" rowspan="%s" style="font-size: 18px; padding 0px 10px"><a href=%s>%s</a</th>\n""" % (int_nbRow*2,str_title, str_title)
-               #str_table += "x : %s rangeMin : %s count : %s" % (x , rangeMin, int_count)
+                
                 for str_image in lstr_i:
                    #str_table += "count : %s" % (int_count)
-                    if int_count in range(rangeMin, rangeMin+int_nbColumn):
+                    if int_count in range(rangeMin, rangeMax):
                         str_header = str_image.split('ex/')[1].split('/dcm2jpg')[0]
                         str_header = str_header.split('-')[0][0:12]
-                        str_table += """<th class="tg-0lax" style="text-align: center;">%s</th></th>\n""" % str_header
+                        #str_table += "x : %s rangeMin : %s rangeMax : %s count : %s int_nbRow : %s" % (x , rangeMin, rangeMax,  int_count, int_nbRow)
+                        str_table += """<th class="tg-0lax" style="text-align: center;">%s</th>\n""" % str_header
                     int_count += 1
+                if x == int_nbRow-1 and int_rest != 0:
+                    restCols = int_nbColumn-int_rest   
+                    str_table += """<th rowspan="2" colspan="%s" style="text-align: center;"></th>\n""" % restCols
                 int_count = 0
                 str_table +="""
                 </tr>
                 <tr>
                 """
                 for str_image in lstr_i:
-                    if int_count in range(rangeMin, rangeMin+int_nbColumn):
+                    if int_count in range(rangeMin, rangeMax):
                         str_image = str_image.split('/')[0]+'/'+str_image.split('/')[1]+'/preview.jpg'
-                        str_htmlImage = '<img src="%s" ondblclick=\"displayHover(this)\" onmousemove=\"onMove();\" onmouseout=\"positionThumbnail(0.5, this);\" onload=\"positionThumbnail(0.5, this);\">' % str_image
+                        str_htmlImage = '<img class ="128" src="%s" ondblclick=\"displayHover(this)\" onmousemove=\"onMove();\" onmouseout=\"positionThumbnail(0.5, this);\" onload=\"positionThumbnail(0.5, this);\">' % str_image
                         str_table += """<td class="tg-0lax tab"><div class="previewContainer"><a href=%s></a>%s</div></td>\n""" % (str_title, str_htmlImage)
                     int_count += 1
                 int_count = 0
@@ -810,7 +826,11 @@ class pfdicom_rev(pfdicom.pfdicom):
       }
 
       function positionThumbnail(normalizedPosition, target) {
-        const THUMBNAIL_HEIGHT = 128;
+        var THUMBNAIL_HEIGHT
+        if (target.className == 128)
+          THUMBNAIL_HEIGHT = 128;
+        if (target.className == 350)
+          THUMBNAIL_HEIGHT = 350;
         const TOTAL_HEIGHT = target.offsetHeight;
         const nbFrames = TOTAL_HEIGHT / THUMBNAIL_HEIGHT;
         const offset = Math.floor(normalizedPosition * nbFrames) * THUMBNAIL_HEIGHT;
@@ -886,13 +906,14 @@ class pfdicom_rev(pfdicom.pfdicom):
         seriesName = seriesName.split('/preview.jpg')[0];
         var imageSRC = e.src.split('preview')[0]+'dcm2jpgRaw/'+'middle-'+seriesName+'.jpg';
         var tagrawSRC = e.src.split('preview')[0]+'tag-raw.txt'
+        var link = e.src.split("-ex/")[0]+'-ex/';
         var tagraw;
         var client = new XMLHttpRequest();
         client.open('GET',tagrawSRC);
         client.onreadystatechange = function() {
           tagraw = client.responseText;
           var content = '<br><div style = "text-align: center; font-size: 20px">'+seriesName+'</div><br>'
-          content = content + '<img style="width: 350px; height:350px; display: block; margin-left: auto; margin-right: auto;"src="'+imageSRC+'">';
+          content = content + '<a href='+link+'><img style="width: 350px; height:350px; display: block; margin-left: auto; margin-right: auto;"src="'+imageSRC+'"></a>';
           content = content + '<pre>'+tagraw+'</pre>'
           document.getElementsByClassName('divhoverDisplay')[0].innerHTML = content;
           elemDisplay = e
@@ -901,6 +922,36 @@ class pfdicom_rev(pfdicom.pfdicom):
       }
     }
 
+    /*function displayHover(e){
+      if (document.getElementsByClassName('focus')[0]!= undefined)
+        document.getElementsByClassName('focus')[0].className = 'tg-0lax tab';
+       if (document.getElementsByClassName('divhoverDisplay')[0]!= undefined){
+        document.getElementsByClassName('divhoverDisplay')[0].style.background = "#333537";
+        e.parentNode.parentNode.className = "tg-0lax tab focus"
+
+        var tmp_img = new Image();
+        tmp_img.src=e.src.split('preview')[0]+'raw-preview.jpg'
+        real_width = tmp_img.width
+        real_height = tmp_img.height
+        new_height = real_height/real_width*350
+        var seriesName = e.src.split('ex/')[1];
+        seriesName = seriesName.split('/preview.jpg')[0];
+        var tagrawSRC = e.src.split('preview')[0]+'tag-raw.txt'
+        var tagraw;
+        var link = e.src.split("-ex/")[0]+'-ex/';
+        var client = new XMLHttpRequest();
+        client.open('GET',tagrawSRC);
+        client.onreadystatechange = function() {
+          tagraw = client.responseText;
+          var content = '<br><div style = "text-align: center; font-size: 20px">'+seriesName+'</div><br>'
+          content = content + '<div style="width: 350px; height:350px; display: block;  margin: auto; overflow: hidden;"><a href='+link+'><img class = "350" style="width: 350px; height:'+new_height+'px;" src="'+e.src.split('preview')[0]+'raw-preview.jpg'+'" onmousemove="onMove();" onmouseout="positionThumbnail(0.5, this);" onload="positionThumbnail(0.5, this);"></a></div>';
+          content = content + '<pre>'+tagraw+'</pre>'
+          document.getElementsByClassName('divhoverDisplay')[0].innerHTML = content;
+          elemDisplay = e
+        }
+        client.send();
+      }
+    }*/
 
 
 
@@ -913,6 +964,7 @@ class pfdicom_rev(pfdicom.pfdicom):
     .tg td{font-size:14px;padding:2px 2px 2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
     .tg th{font-size:14px;font-weight:normal;padding:2px 2px;border-style:solid;border-width:0px;overflow:hidden;word-break:normal;border-color:black;}
     .tg td:hover{cursor: pointer; background-color: #fff; color: #000;}
+    .tg:hover{cursor: pointer; border:2px solid #fff;}
     .tg .tg-0lax{text-align:left;vertical-align:middle; border:1px solid #1d1f21; white-space: nowrap; max-width: 128px; max-height: 128px;}
     .table .th .td {border: 1px solid #4a4b4d;}
     .divhoverHide {display:none;}
