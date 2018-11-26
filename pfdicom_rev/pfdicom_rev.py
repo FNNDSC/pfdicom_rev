@@ -90,7 +90,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         #
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
-        self.str_version                = "2.2.8"
+        self.str_version                = "2.4.0"
 
         self.b_anonDo                   = False
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
@@ -896,7 +896,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         }
       }
 
-    function displayHover(e){
+    /*function displayHover(e){
       if (document.getElementsByClassName('focus')[0]!= undefined)
         document.getElementsByClassName('focus')[0].className = 'tg-0lax tab';
        if (document.getElementsByClassName('divhoverDisplay')[0]!= undefined){
@@ -920,9 +920,9 @@ class pfdicom_rev(pfdicom.pfdicom):
         }
         client.send();
       }
-    }
+    }*/
 
-    /*function displayHover(e){
+    function displayHover(e){
       if (document.getElementsByClassName('focus')[0]!= undefined)
         document.getElementsByClassName('focus')[0].className = 'tg-0lax tab';
        if (document.getElementsByClassName('divhoverDisplay')[0]!= undefined){
@@ -951,7 +951,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         }
         client.send();
       }
-    }*/
+    }
 
 
 
