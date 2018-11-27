@@ -90,7 +90,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         #
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
-        self.str_version                = "2.4.2"
+        self.str_version                = "2.4.4"
 
         self.b_anonDo                   = False
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
@@ -752,7 +752,7 @@ class pfdicom_rev(pfdicom.pfdicom):
             """
             Generate a table of thumbnails about a list of images
             """
-            int_nbColumn = 5
+            int_nbColumn    = 5
             lstr_images     = [i for i in lstr_images if 'mo/' in i]
             lstr_i          = [i.split('mo/')[1] for i in lstr_images]
             str_dir = str_pathProcess+'/'+str_title+'/'
