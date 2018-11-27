@@ -96,7 +96,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
         self.str_dcm2jpgDirResize       = 'dcm2jpgResize'
         self.str_dcm2jpgDirDCMresize    = 'dcm2jpgDCMresize'
-        self.str_previewFileName        = 'preview.jpg'`
+        self.str_previewFileName        = 'preview.jpg'
         self.str_studyFileName          = 'description.json'
         self.str_serverName             = ''
         self.str_DICOMthumbnail         = '300x300'
@@ -497,7 +497,7 @@ class pfdicom_rev(pfdicom.pfdicom):
             )
             str_execCmd         = self.exec_jpgResize                           + \
             ' -resize %s -background none -gravity center -extent %s '          + \
-                                    '%s/%s/* '                                  % \ 
+                                    '%s/%s/* '                                  % \
                 (self.str_DICOMthumbnail, self.str_DICOMthumbnail, 
                 path, self.str_dcm2jpgDirDCMresize)
             self.dp.qprint( "done", syslog = False, level = 3)
