@@ -122,34 +122,63 @@ Command line arguments
 
 
 
-                                      /--stage 2--\ 
-                                     /             \ 
-                            stage 1--               --stage 4
-                                     \             /
-                                      \--stage 3--/ 
+                                      /--stage 2 
+                                     /              
+                            stage 1--               
+                                     \             
+                                      \--stage 3----stage 4 
 
 
             [1] analyize all the DCM files in the <inputDir>
                 *   convert each DCM to JPG (native)
-                *   resize all JPGs to 96x96 and generate preview strip
+                *   resize all JPGs to  96x96  and generate mosaic preview strip
+                *   resize all JPGs to 300x300 and generate DCMtag preview
                 *   tag middle JPG in series based on series length
-                *   create JSON per example series-level descriptors:
+                *   create JSON per example series-level descriptors in each example
+                    directory:
                         * declare location of actual series DCM files
-                *   create JSON per month example-level descriptors
+                *   create JSON per month example-level descriptors in each month 
+                    directory: 
                         * declare location of middle thumbnail JPGs
+                
+                In each series directory:
+                    <YY>-yr/<MM>-mo/<XX>-ex/
+                        forall(<SERIES>):
+                            o dcm2jpgDCMresize/*jpg
+                            o dcm2jpgRaw/*jpg
+                            o preview.jpg
+                            o raw-preview.jpg
+                        o <SERIES>-series.json
+                    <YY>-yr/<MM>-mo/
+                        o ex.json
 
-            [2] analyze all the JSON series-level descriptors from stage [1]
+            [2] analyze all the JSON series-level descriptors from stage [1] and 
+                in each example directory:
                 *   create study-level JSON descriptors that summarize
                     all series JSON data into one file
+                *   create study-level index.html that directs to the ReV viewer
+                    with this yr/mo/ex tuple.
+
+                In each study directory:
+                    <YY>-yr/<MM>-mo/<XX>-ex/
+                        o description.json
+                        o index.html
 
             [3] analyze all the JSON per month example-level descriptors
-                from stage [1]
-                *   create simple overview per-month index.html that shows
+                from stage [1] and in each month directory:
+                *   create overview per-month index.html that shows
                     per-example thumbnails
+
+                In each month direcory:
+                    <YY>-yr/<MM>-mo
+                    o index.html
 
             [4] analyze all JSON study level descriptors from stage [2]
                 *   create tree map for mapping of arbitrary patient age to
                     closest hits in tree
+                
+                In the root dir:
+                    o map.json
 
         [--studyJSON <studyJSONfile>]
         The name of the study JSON file. 
