@@ -19,7 +19,7 @@ import  pfmisc
 from    pfmisc._colors      import Colors
 from    pfmisc              import other
 
-str_version = "2.4.0"
+str_version = "2.4.2"
 str_desc    = Colors.CYAN + """
 
 
@@ -294,6 +294,10 @@ parser.add_argument("--studyJSON",
                     help    = "name of the JSON study descriptor file",
                     dest    = 'studyJSON',
                     default = 'description.json')
+parser.add_argument("-D", "--DICOMthumbnail",
+                    help    = "size of the DICOM thumbnail in the tag view",
+                    dest    = 'DICOMthumbnail',
+                    default = '300x300')
 parser.add_argument("--printElapsedTime",
                     help    = "print program run time",
                     dest    = 'printElapsedTime',
@@ -376,6 +380,7 @@ for str_ext in lstr_stageExtenions:
                         outputDir           = args.outputDir,
                         outputFileStem      = args.outputFileStem,
                         outputLeafDir       = args.outputLeafDir,
+                        DICOMthumbnail      = args.DICOMthumbnail,
                         tagStruct           = args.tagStruct,
                         server              = args.server,
                         studyJSON           = args.studyJSON,
