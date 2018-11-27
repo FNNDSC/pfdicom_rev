@@ -108,7 +108,9 @@ Command line arguments
         [-S|--server <server>]
         The name of the server hosting the ReV viewer.
 
-        Defaults to 'http://fnndsc.tch.harvard.edu'.
+        Defaults to empty string '' which is interpreted as the current host, 
+        i.e. the host running `pfdicom_rev`. If the actual viewer is hosted
+        elsewhere, use this flag to specify the *viewer* host.
 
         [--stage <stage>]
         Stage to execute -- mostly for debugging purposes and useful if running a 
