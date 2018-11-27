@@ -221,7 +221,7 @@ Process a tree containing DICOM files for ReV:
 .. code:: bash
 
         pfdicom_rev                                         \\
-                    -I /var/www/html/rev -e dcm             \\
+                    -I /var/www/html/rev                    \\
                     -O %inputDir                            \\
                     --threads 0 --printElapsedTime          \\
                     -v 3
