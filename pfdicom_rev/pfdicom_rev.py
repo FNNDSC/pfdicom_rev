@@ -90,14 +90,16 @@ class pfdicom_rev(pfdicom.pfdicom):
         #
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
-        self.str_version                = "2.4.0"
+        self.str_version                = "2.4.2"
 
         self.b_anonDo                   = False
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
         self.str_dcm2jpgDirResize       = 'dcm2jpgResize'
-        self.str_previewFileName        = 'preview.jpg'
+        self.str_dcm2jpgDirDCMresize    = 'dcm2jpgDCMresize'
+        self.str_previewFileName        = 'preview.jpg'`
         self.str_studyFileName          = 'description.json'
         self.str_serverName             = ''
+        self.str_DICOMthumbnail         = '300x300'
 
         # Tags
         self.b_tagList                  = False
@@ -154,6 +156,7 @@ class pfdicom_rev(pfdicom.pfdicom):
             if key == 'verbosity':          self.verbosityLevel         = int(value)
             if key == 'server':             self.str_serverName         = value
             if key == 'studyJSON':          self.str_studyFileName      = value
+            if key == 'DICOMthumbnail':     self.str_DICOMthumbnail     = value
 
         # Set logging
         self.dp                        = pfmisc.debug(    
@@ -470,7 +473,7 @@ class pfdicom_rev(pfdicom.pfdicom):
                             level       = 3)
  
         def jpegs_resize():
-            self.dp.qprint( "Resizing jpgs... ",
+            self.dp.qprint( "Resizing jpgs for mosiac... ",
                             end         = '',
                             level       = 3,
                             methodcol   = 55)
@@ -482,7 +485,24 @@ class pfdicom_rev(pfdicom.pfdicom):
             ' -resize 96x96 -background none -gravity center -extent 96x96 '    + \
                                     '%s/%s/* '   % (path, self.str_dcm2jpgDirResize)
             self.dp.qprint( "done", syslog = False, level = 3)
-            ret                 = self.sys_run(str_execCmd)
+            retMosiac   = self.sys_run(str_execCmd)
+
+            self.dp.qprint( "Resizing jpgs for DICOM tag view... ",
+                            end         = '',
+                            level       = 3,
+                            methodcol   = 55)
+            shutil.copytree(
+                '%s/%s' % (path, self.str_dcm2jpgDirRaw),
+                '%s/%s' % (path, self.str_dcm2jpgDirDCMresize)
+            )
+            str_execCmd         = self.exec_jpgResize                           + \
+            ' -resize %s -background none -gravity center -extent %s '          + \
+                                    '%s/%s/* '                                  % \ 
+                (self.str_DICOMthumbnail, self.str_DICOMthumbnail, 
+                path, self.str_dcm2jpgDirDCMresize)
+            self.dp.qprint( "done", syslog = False, level = 3)
+            retDCMtag   = self.sys_run(str_execCmd)
+            return (retMosiac, retDCMtag)
 
         def jpegs_middleInSet_tag():
             str_srcFile         = ""
@@ -516,21 +536,24 @@ class pfdicom_rev(pfdicom.pfdicom):
             return (str_srcFile, str_destFile)
 
         def jpegs_previewStripGenerate():
-            self.dp.qprint( "Generating preview strip...",
+            self.dp.qprint( "Generating preview strip for mosiac...",
                             level       = 3,
                             methodcol   = 55)
             str_execCmd         = self.exec_jpgPreview                          + \
                                     ' -append '                                 + \
                                     '%s/%s/* ' % (path, self.str_dcm2jpgDirResize)    + \
                                     '%s/%s'     % (path, self.str_previewFileName)
-            ret                 = self.sys_run(str_execCmd)
+            retMosaicPreview    = self.sys_run(str_execCmd)
 
+            self.dp.qprint( "Generating preview strip for DCM tag...",
+                            level       = 3,
+                            methodcol   = 55)
             str_execCmd         = self.exec_jpgPreview                          + \
                                     ' -append '                                 + \
-                                    '%s/%s/* ' % (path, self.str_dcm2jpgDirRaw)    + \
+                                    '%s/%s/* ' % (path, self.str_dcm2jpgDirDCMresize)    + \
                                     '%s/raw-%s'     % (path, self.str_previewFileName)
-            ret                 = self.sys_run(str_execCmd)
-
+            retDCMPreview       = self.sys_run(str_execCmd)
+            return (retMosaicPreview, retDCMPreview)
 
         def jsonSeriesDescription_generate():
             # pudb.set_trace()
