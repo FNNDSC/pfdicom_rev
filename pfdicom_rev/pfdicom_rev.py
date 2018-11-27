@@ -496,9 +496,8 @@ class pfdicom_rev(pfdicom.pfdicom):
                 '%s/%s' % (path, self.str_dcm2jpgDirDCMresize)
             )
             str_execCmd         = self.exec_jpgResize                           + \
-            ' -resize %s -background none -gravity center -extent %s '          + \
-                                    '%s/%s/* '                                  % \
-                (self.str_DICOMthumbnail, self.str_DICOMthumbnail, 
+            ' -resize %s -background none -gravity center -extent %s %s/%s/* '  % \
+                (self.str_DICOMthumbnail, self.str_DICOMthumbnail,                \
                 path, self.str_dcm2jpgDirDCMresize)
             self.dp.qprint( "done", syslog = False, level = 3)
             retDCMtag   = self.sys_run(str_execCmd)
