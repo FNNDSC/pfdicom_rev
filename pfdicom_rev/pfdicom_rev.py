@@ -90,7 +90,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         #
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
-        self.str_version                = "2.4.4"
+        self.str_version                = "2.4.6"
 
         self.b_anonDo                   = False
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
@@ -147,9 +147,9 @@ class pfdicom_rev(pfdicom.pfdicom):
         # Process some of the kwargs by the base class
         super().__init__(*args, **kwargs)
 
-        self.declare_selfvars()
-        self.externalExecutables_set()
-        self.anonStruct_set()
+        pfdicom_rev.declare_selfvars(self)
+        pfdicom_rev.externalExecutables_set(self)
+        pfdicom_rev.anonStruct_set(self)
 
         for key, value in kwargs.items():
             if key == 'tagStruct':          tagStruct_process(value)
