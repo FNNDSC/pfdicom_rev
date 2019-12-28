@@ -90,7 +90,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         #
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
-        self.str_version                = "2.4.6"
+        self.str_version                = "2.4.8"
 
         self.b_anonDo                   = False
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
@@ -562,6 +562,18 @@ class pfdicom_rev(pfdicom.pfdicom):
                 dcm_modalitiesInStudy   = DCM.ModalitiesInStudy
             except:
                 dcm_modalitiesInStudy   = "not found"
+            try:
+                str_seriesDate          = DCM.SeriesDate
+            except:
+                str_seriesDate          = "undefined date"
+            try:
+                str_seriesDescription   = DCM.SeriesDate
+            except:
+                str_seriesDescription   = "no series description"
+            try:
+                str_studyDescription    = DCM.StudyDescription
+            except:
+                str_studyDescription    = "no study description"
             json_obj = {
                 "query": {
                     "data": [
@@ -573,10 +585,10 @@ class pfdicom_rev(pfdicom.pfdicom):
                                 "value": '%s' % DCM.SeriesInstanceUID,
                             },
                             "SeriesDescription": {
-                                "value": '%s' % DCM.SeriesDescription,
+                                "value": '%s' % str_seriesDescription,
                             },
                             "StudyDescription": {
-                                "value": '%s' % DCM.StudyDescription,
+                                "value": '%s' % str_studyDescription,
                             },
                             "ModalitiesInStudy": {
                                     "value": '%s' % dcm_modalitiesInStudy,
@@ -591,8 +603,8 @@ class pfdicom_rev(pfdicom.pfdicom):
                             "details": {
                                 "series": {
                                     "uid":          '%s' % DCM.SeriesInstanceUID,
-                                    "description":  '%s' % DCM.SeriesDescription,
-                                    "date":         '%s' % DCM.SeriesDate,
+                                    "description":  '%s' % str_seriesDescription,
+                                    "date":         '%s' % str_seriesDate,
                                     "data":         [str_relPath + '/' + s for s in  d_outputInfo['l_file']],
                                     "files":        str(len(d_outputInfo['l_file'])),
                                     "preview": {
