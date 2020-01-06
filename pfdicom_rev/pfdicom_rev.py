@@ -90,7 +90,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         #
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
-        self.str_version                = "2.4.8"
+        self.str_version                = "2.4.10"
 
         self.b_anonDo                   = False
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
@@ -555,50 +555,74 @@ class pfdicom_rev(pfdicom.pfdicom):
             return (retMosaicPreview, retDCMPreview)
 
         def jsonSeriesDescription_generate():
+
+            def aquistionDate_determine(DCM, str_studyDate, str_seriesDate):
+                """
+                Try and "intelligently" determine the aquisitionDate
+                given many weirdness.
+                """
+                str_aquisitionDate  = ""
+                try:
+                    str_aquisitionDate      = DCM.AcquistionDate
+                except:
+                    try:
+                        if len(str_studyDate):
+                            str_aquisitionDate  = str_studyDate
+                        else:
+                            str_aquisitionDate  = str_seriesDate
+                    except:
+                        try:
+                            str_aquisitionDate  = str_seriesDate
+                        except:
+                            str_aquisitionDate  = ""
+                if str_aquisitionDate == '19000101':
+                    if str_studyDate != '19000101':
+                        str_aquisitionDate  = str_studyDate
+                    else:
+                        str_aquisitionDate  = str_seriesDate
+                return str_aquisitionDate
+
+            def DICOMtag_lookup(DCM, str_tagName, str_notFound = ""):
+                try:
+                    str_tag             = getattr(DCM, str_tagName)
+                except:
+                    if len(str_notFound):
+                        str_tag             = str_notFound
+                    else:
+                        str_tag             = "%s not found" % str_tagName
+                return str_tag
+
             # pudb.set_trace()
             DCM                         = d_outputInfo['l_dcm'][0]
             str_jsonFileName            = '%s-series.json' % path
-            try:
-                dcm_modalitiesInStudy   = DCM.ModalitiesInStudy
-            except:
-                dcm_modalitiesInStudy   = "not found"
-            try:
-                str_seriesDate          = DCM.SeriesDate
-            except:
-                str_seriesDate          = "undefined date"
-            try:
-                str_seriesDescription   = DCM.SeriesDate
-            except:
-                str_seriesDescription   = "no series description"
-            try:
-                str_studyDescription    = DCM.StudyDescription
-            except:
-                str_studyDescription    = "no study description"
+            str_seriesInstanceUID       = DICOMtag_lookup(DCM,  "SeriesInstanceUID")
+            dcm_modalitiesInStudy       = DICOMtag_lookup(DCM,  "ModalitiesInStudy")
+            str_seriesDescription       = DICOMtag_lookup(DCM,  "SeriesDescription")
+            str_studyDescription        = DICOMtag_lookup(DCM,  "StudyDescription")
+            str_patientID               = DICOMtag_lookup(DCM,  "PatientID")
+            str_patientName             = DICOMtag_lookup(DCM,  "PatientName")
+            str_seriesDate              = DICOMtag_lookup(DCM,  "SeriesDate",
+                                                                "19000101")
+            str_studyDate               = DICOMtag_lookup(DCM,  "StudyDate",
+                                                                "19000101")
+            str_patientBirthDate        = DICOMtag_lookup(DCM,  "PatientBirthDate",
+                                                                "19000101")
+            str_aquisitionDate          = aquistionDate_determine(  DCM,
+                                                                    str_studyDate,
+                                                                    str_seriesDate)
             json_obj = {
                 "query": {
                     "data": [
                         {
-                            "SeriesInstanceUID": {
-                                "value": '%s' % DCM.SeriesInstanceUID,
-                            },
-                            "uid": {
-                                "value": '%s' % DCM.SeriesInstanceUID,
-                            },
-                            "SeriesDescription": {
-                                "value": '%s' % str_seriesDescription,
-                            },
-                            "StudyDescription": {
-                                "value": '%s' % str_studyDescription,
-                            },
-                            "ModalitiesInStudy": {
-                                    "value": '%s' % dcm_modalitiesInStudy,
-                            },
-                            "PatientID": {
-                                "value": '%s' % DCM.PatientID,
-                            },
-                            "PatientName": {
-                                "value": '%s' % DCM.PatientName,
-                            },
+                            "SeriesInstanceUID": { "value": '%s' % str_seriesInstanceUID,},
+                            "uid":               { "value": '%s' % str_seriesInstanceUID,},
+                            "SeriesDescription": { "value": '%s' % str_seriesDescription,},
+                            "StudyDescription":  { "value": '%s' % str_studyDescription,},
+                            "ModalitiesInStudy": { "value": '%s' % dcm_modalitiesInStudy,},
+                            "PatientID":         { "value": '%s' % str_patientID,},
+                            "PatientName":       { "value": '%s' % str_patientName,},
+                            "PatientBirthDate":  { "value": '%s' % str_patientBirthDate},
+                            "AcquistionDate":    { "value": '%s' % str_aquisitionDate},
                             #  extra fun
                             "details": {
                                 "series": {
