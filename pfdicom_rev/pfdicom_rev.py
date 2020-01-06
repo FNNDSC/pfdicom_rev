@@ -90,7 +90,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         #
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
-        self.str_version                = "2.4.14"
+        self.str_version                = "2.4.16"
 
         self.b_anonDo                   = False
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
@@ -458,8 +458,6 @@ class pfdicom_rev(pfdicom.pfdicom):
                             methodcol   = 55)
             if not os.path.exists(str_jpgDir):
                 other.mkdir(str_jpgDir)
-                other.mkdir(str_jpgDirResize)
-                other.mkdir(str_jpgDirDCMresize)
             for f in d_outputInfo['l_file']:
                 str_jpgFile     = '%s/%s/%s' % (
                                     path, 
