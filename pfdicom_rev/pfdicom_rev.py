@@ -90,7 +90,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         #
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
-        self.str_version                = "2.4.12"
+        self.str_version                = "2.4.14"
 
         self.b_anonDo                   = False
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
@@ -450,12 +450,16 @@ class pfdicom_rev(pfdicom.pfdicom):
         def jpegs_generateFromDCM():
             nonlocal    jpegsGenerated
             str_jpgDir          = '%s/%s' % (path, self.str_dcm2jpgDirRaw)
+            str_jpgDirResize    = '%s/%s' % (path, self.str_dcm2jpgDirResize)
+            str_jpgDirDCMresize = '%s/%s' % (path, self.str_dcm2jpgDirDCMresize)
             self.dp.qprint("Generating jpgs from dcm...", 
                             end         = '',
                             level       = 3,
                             methodcol   = 55)
             if not os.path.exists(str_jpgDir):
                 other.mkdir(str_jpgDir)
+                other.mkdir(str_jpgDirResize)
+                other.mkdir(str_jpgDirDCMresize)
             for f in d_outputInfo['l_file']:
                 str_jpgFile     = '%s/%s/%s' % (
                                     path, 
