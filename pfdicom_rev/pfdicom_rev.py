@@ -18,6 +18,14 @@ import      pudb
 import      pftree
 import      pfdicom
 
+import      logging
+matlogger               = logging.getLogger('matplotlib')
+matlogger.propagate     = False
+import      matplotlib
+matplotlib.use('Agg')
+import      pylab
+
+
 class pfdicom_rev(pfdicom.pfdicom):
     """
 
@@ -90,7 +98,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         #
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
-        self.str_version                = "2.4.16"
+        self.str_version                = "3.0.0"
 
         self.b_anonDo                   = False
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
@@ -119,6 +127,10 @@ class pfdicom_rev(pfdicom.pfdicom):
         self.exec_jpgResize             = ''
         self.exec_jpgPreview            = ''
         self.exec_dcmAnon               = ''
+
+        # Explicit internal DCM to JPG conversion
+        self.str_interpolation          = None
+        self.f_imageScale               = None
 
     def anonStruct_set(self):
         """
@@ -447,17 +459,58 @@ class pfdicom_rev(pfdicom.pfdicom):
                 self.dp.qprint("saving: %s/%s" % (path, f), level = 5)
                 anonFilesSaved += 1
 
+        def img_create(d_DICOM, astr_path):
+            '''
+            This method is a lightly adapted version of the same method in
+            
+                        dicom_tagExtract.py
+
+            Create and save an image conversion of the DICOM file.
+            :return:
+            '''
+            b_status            = False
+            d_tagsInString      = self.tagsInString_process(d_DICOM,
+                                                            astr_path)
+            str_outputImageFile = d_tagsInString['str_result']
+            str_pathFile        = '%s%s' % (str_outputImageFile, '.jpg')
+            self.dp.qprint('Saving image file: %s...' % str_pathFile, level = 5)
+            try:
+                image           = d_DICOM['dcm'].pixel_array
+                pylab.imshow(image, cmap=pylab.cm.bone, interpolation = self.str_interpolation)
+                ax              = pylab.gca()
+                F               = pylab.gcf()
+                defaultSize     = F.get_size_inches()
+                if self.f_imageScale: 
+                    F.set_size_inches( (defaultSize[0]*self.f_imageScale, 
+                                        defaultSize[1]*self.f_imageScale) )
+                ax.set_facecolor('#1d1f21')
+                ax.tick_params(axis = 'x', colors='white')
+                ax.tick_params(axis = 'y', colors='white')
+                pylab.savefig(str_pathFile, facecolor = ax.get_facecolor())
+                if self.f_imageScale:
+                    F.set_size_inches(defaultSize)
+                b_status    = True
+            except:
+                pass
+            if not b_status:
+                self.dp.qprint('Some error was trapped in image creation.',   comms = 'error')
+                self.dp.qprint('path = %s' % astr_path, comms = 'error')
+            return {
+                'status':               b_status,
+                'str_outputImageFile':  str_outputImageFile
+            }
+
         def jpegs_generateFromDCM():
             nonlocal    jpegsGenerated
             str_jpgDir          = '%s/%s' % (path, self.str_dcm2jpgDirRaw)
-            str_jpgDirResize    = '%s/%s' % (path, self.str_dcm2jpgDirResize)
-            str_jpgDirDCMresize = '%s/%s' % (path, self.str_dcm2jpgDirDCMresize)
             self.dp.qprint("Generating jpgs from dcm...", 
                             end         = '',
                             level       = 3,
                             methodcol   = 55)
             if not os.path.exists(str_jpgDir):
                 other.mkdir(str_jpgDir)
+            # pudb.set_trace()
+            i = 0
             for f in d_outputInfo['l_file']:
                 str_jpgFile     = '%s/%s/%s' % (
                                     path, 
@@ -469,7 +522,24 @@ class pfdicom_rev(pfdicom.pfdicom):
                                     os.path.join(d_outputInfo['str_path'], f)   + \
                                     ' ' + str_jpgFile
                 ret             = self.sys_run(str_execCmd)
-                jpegsGenerated  += 1
+                if ret[2]:
+                    # Some error in the conversion occured, fall back to 
+                    # internal conversion based off pydicom and matplotlib
+                    self.dp.qprint("Attempting internal DCM conversion", 
+                                    level = 3, 
+                                    comms = 'status')
+                    d_ret =  img_create({'dcm': d_outputInfo['l_dcm'][i]}, str_jpgFile + '.%d' % i)
+                    if d_ret['status']:
+                        self.dp.qprint("Successful conversion", 
+                                        level = 3, 
+                                        comms = 'status')
+                    else:
+                        self.dp.qprint("Internal conversion FAILED", 
+                                        level = 3, 
+                                        comms = 'error')
+                else:    
+                    jpegsGenerated  += 1
+                i += 1
             self.dp.qprint(" generated %d jpgs." % jpegsGenerated, 
                             syslog      = False,
                             level       = 3)
