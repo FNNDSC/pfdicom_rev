@@ -12,7 +12,7 @@ def readme():
 
 setup(
       name             =   'pfdicom_rev',
-      version          =   '2.4.16',
+      version          =   '3.0.0',
       description      =   'Process DICOM trees and create JSON summares for the ReV viewer.',
       long_description =   readme(),
       author           =   'FNNDSC',
