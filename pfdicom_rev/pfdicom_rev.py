@@ -98,7 +98,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         #
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
-        self.str_version                = "3.0.0"
+        self.str_version                = "3.0.2"
 
         self.b_anonDo                   = False
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
@@ -466,6 +466,10 @@ class pfdicom_rev(pfdicom.pfdicom):
                         dicom_tagExtract.py
 
             Create and save an image conversion of the DICOM file.
+
+            Note, this method is more robust than the CLI tool typically called
+            however it takes significantly longer to run.
+
             :return:
             '''
             b_status            = False
@@ -533,6 +537,7 @@ class pfdicom_rev(pfdicom.pfdicom):
                         self.dp.qprint("Successful conversion", 
                                         level = 3, 
                                         comms = 'status')
+                        jpegsGenerated += 1
                     else:
                         self.dp.qprint("Internal conversion FAILED", 
                                         level = 3, 
