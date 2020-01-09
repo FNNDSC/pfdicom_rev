@@ -98,7 +98,7 @@ class pfdicom_rev(pfdicom.pfdicom):
         #
         self.str_desc                   = ''
         self.__name__                   = "pfdicom_rev"
-        self.str_version                = "3.0.2"
+        self.str_version                = "3.0.4"
 
         self.b_anonDo                   = False
         self.str_dcm2jpgDirRaw          = 'dcm2jpgRaw'
@@ -494,8 +494,8 @@ class pfdicom_rev(pfdicom.pfdicom):
                 if self.f_imageScale:
                     F.set_size_inches(defaultSize)
                 b_status    = True
-            except:
-                pass
+            except Exception as e:
+                self.dp.qprint('Internal error trapped: %s' % e, level = 3, comms = 'error')
             if not b_status:
                 self.dp.qprint('Some error was trapped in image creation.',   comms = 'error')
                 self.dp.qprint('path = %s' % astr_path, comms = 'error')
